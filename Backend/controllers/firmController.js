@@ -1,0 +1,95 @@
+const Request = require('../models/Request');
+const Crop = require('../models/Crop');
+const mongoose = require('mongoose')
+
+// POST /api/crop-request/:cropId
+exports.PostRequestCrop = async (req, res) => {
+  try {
+    const cropId = req.params.cropId;
+    const userId = req.user._id; // from auth middleware
+
+    // Validate crop exists
+    const crop = await Crop.findById(cropId);
+    if (!crop) {
+      return res.status(404).json({ error: 'Crop not found' });
+    }
+
+    // Validate required fields (from frontend form)
+    const {  deadline, requirement } = req.body;
+
+    if (!deadline || !requirement) {
+      return res.status(400).json({ error: 'Required fields missing' });
+    }
+
+    // Optional: You can add extra validation
+    if (new Date(deadline) < new Date()) {
+      return res.status(400).json({ error: 'Deadline date must be present date or after' });
+    }
+
+
+    // Create new request
+    const newRequest = new Request({
+       deadline,
+      requirement,
+      cropId,
+      farmerId: crop.userId ,// farmer
+      firmId:userId
+          });
+
+    await newRequest.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Crop request submitted successfully',
+      request: newRequest
+    });
+
+  } catch (error) {
+    console.error('Error creating crop request:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to submit crop request'
+    });
+  }
+};
+exports.getMyRequests = async (req, res) => {
+  try {
+    // 1. Authentication check
+    if (!req.isLoggedIn || !req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized – please log in to view your requests'
+      });
+    }
+
+    const userId = req.user._id;
+
+    // 2. Validate user ID format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid user ID'
+      });
+    }
+
+    // 3. Fetch all requests made by this user
+    const requests = await Request.find({ firmId:userId })
+      .populate({
+        path: 'cropId farmerId'
+      })
+     console.log(requests);
+    // 4. Format response
+    return res.status(200).json({
+      success: true,
+       crop:requests
+    });
+
+  } catch (error) {
+    console.error('Error in getMyRequests:', error);
+
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch your crop requests',
+    });
+  }
+};

@@ -1,0 +1,10 @@
+const express = require('express');
+const farmerrouter = express.Router();
+const farmerController = require('../controllers/farmerController');
+farmerrouter.post('/api/add-crop',farmerController.PostAddCrop);
+farmerrouter.get('/api/listed-crops',farmerController.getMyListedCrops);
+farmerrouter.get('/api/requested-crops',farmerController.getRequestedCrops);
+farmerrouter.patch('/api/accept/:requestId',farmerController.acceptCropRequest);
+farmerrouter.patch('/api/reject/:requestId',farmerController.rejectCropRequest);
+
+module.exports = farmerrouter;
