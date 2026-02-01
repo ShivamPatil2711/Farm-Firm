@@ -59,11 +59,10 @@ exports.getCropDetails = async (req, res) => {
 exports.getAllRequests = async (req, res) => {
   try {
       // 3. Fetch all requests made by this user
-    const requests = await FirmRequest.find()
+    const requests = await FirmRequest.find({status:"Pending"})
       .populate({
         path: 'firmId'
       })
-     console.log(" njnjknj",requests);
     // 4. Format response
     return res.status(200).json({
       success: true,

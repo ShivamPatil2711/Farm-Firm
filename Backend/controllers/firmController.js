@@ -78,7 +78,7 @@ exports.getMyRequests = async (req, res) => {
       .populate({
         path: 'cropId farmerId'
       })
-     console.log(requests);
+     console.log("jkbkjhb",requests);
     // 4. Format response
     return res.status(200).json({
       success: true,
@@ -108,7 +108,6 @@ exports.PostAddRequest = async (req, res) => {
 
     // Validate required fields (from frontend form)
     const { cropName, deadline, requirement } = req.body;
-console.log("whjdbwhjdb",req.body)
     if (!deadline || !requirement || !cropName) {
       return res.status(400).json({ error: 'Required fields missing' });
     }

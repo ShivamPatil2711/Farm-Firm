@@ -220,8 +220,7 @@ exports.getRequestedCrops = async (req, res) => {
       success: true,
       requests:requests
     });
-
-  } catch (error) {
+      } catch (error) {
     console.error('Error in getRequestedCrops:', error);
     return res.status(500).json({
       success: false,

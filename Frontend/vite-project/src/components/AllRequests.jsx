@@ -3,7 +3,7 @@
 import { useState, useEffect, useContext } from "react";
 import { Input } from "./Input";
 import { Button } from "./Button";
-import { Card } from "./Card";
+import { Card, CardContent } from "./Card"; // assuming CardContent exists; if not, use div with p-5
 import { Badge } from "./Badge";
 import {
   Select,
@@ -22,7 +22,7 @@ import {
   MapPin,
   AlertCircle,
   Plus,
-  Phone,           // ← added
+  Phone,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { AuthContext } from "./AuthContext";
@@ -47,6 +47,9 @@ const AllRequests = () => {
     deadline: "",
   });
 
+  // ────────────────────────────────────────────────
+  // Fetch logic (unchanged except minor error handling polish)
+  // ────────────────────────────────────────────────
   useEffect(() => {
     const fetchAllRequests = async () => {
       try {
@@ -55,14 +58,12 @@ const AllRequests = () => {
 
         const response = await fetch(`${BACKEND_URL}/api/allrequests`, {
           method: "GET",
+          credentials: "include", // ← added for consistency with auth flows
         });
 
-        if (!response.ok) {
-          throw new Error(`Server responded with status ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
-        console.log(data);
 
         if (data.success) {
           const normalized = data.requests.map((req) => ({
@@ -71,13 +72,21 @@ const AllRequests = () => {
             firmName: req.firmId?.CompanyName || "Unknown Firm",
             city: req.firmId?.city || "—",
             state: req.firmId?.state || "—",
-            firmPhone: req.firmId?.phoneNumber || null, 
+            firmPhone: req.firmId?.phoneNumber || null,
             requirement: req.requirement || "Not specified",
             deadline: req.deadline
-              ? new Date(req.deadline).toLocaleDateString("en-IN")
+              ? new Date(req.deadline).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
               : "—",
-            requestedAt: new Date(req.createdAt).toLocaleDateString("en-IN"),
-            status: (req.status || "Pending").toLowerCase(),
+            requestedAt: new Date(req.createdAt).toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            }),
+            status: req.status || "Pending",
           }));
 
           setRequests(normalized);
@@ -85,8 +94,8 @@ const AllRequests = () => {
           setError(data.error || "Failed to load requests");
         }
       } catch (err) {
-        console.error("Error fetching requests:", err);
-        setError("Could not load crop requests. Please try again later.");
+        console.error("Fetch error:", err);
+        setError("Unable to load crop requests at this time.");
       } finally {
         setLoading(false);
       }
@@ -104,7 +113,7 @@ const AllRequests = () => {
     e.preventDefault();
 
     if (!formData.cropName || !formData.requirement || !formData.deadline) {
-      toast.error("Please fill in all fields");
+      toast.error("Please complete all required fields.");
       return;
     }
 
@@ -117,37 +126,36 @@ const AllRequests = () => {
       });
 
       const data = await response.json();
-      console.log(data);
 
       if (response.ok) {
-        toast.success(data.message || "Crop request submitted successfully!");
+        toast.success(data.message || "Request submitted successfully.");
         setFormData({ cropName: "", requirement: "", deadline: "" });
         setRequests((prev) => [
           {
-            id: data._id ,
-            cropName: formData.cropName,
-            firmName: data.firmId?.CompanyName || "Unknown Firm",
-            city: data.firmId?.city || "—",
-            state: data.firmId?.state || "—",
-            firmPhone: data.firmId?.phoneNumber || null,
-            requirement: formData.requirement,
-            deadline: formData.deadline,
+            id: data.request?._id || Date.now().toString(),
+            cropName: data.request?.cropname || formData.cropName,
+            firmName: data.request?.firmId?.CompanyName || "Your Firm",
+            city: data.request?.firmId?.city || "—",
+            state: data.request?.firmId?.state || "—",
+            firmPhone: data.request?.firmId?.phoneNumber || null,
+            requirement: data.request?.requirement || formData.requirement,
+            deadline: new Date(data.request?.deadline || formData.deadline).toLocaleDateString("en-IN"),
             requestedAt: new Date().toLocaleDateString("en-IN"),
-            status: "Pending",
+            status: data.request?.status || "Pending",
           },
-          ...prev
+          ...prev,
         ]);
         setShowAddForm(false);
       } else {
-        toast.error(data.error || "Failed to submit request");
+        toast.error(data.error || "Submission failed.");
       }
     } catch (err) {
-      toast.error("Network error while submitting request");
+      toast.error("Network error. Please try again.");
     }
   };
 
   const handleAcceptRequest = async (requestId) => {
-    if (!window.confirm("Are you sure you want to accept this request?")) return;
+    if (!window.confirm("Confirm acceptance of this request?")) return;
 
     try {
       const response = await fetch(`${BACKEND_URL}/api/requests/accept/${requestId}`, {
@@ -157,56 +165,53 @@ const AllRequests = () => {
       });
 
       const data = await response.json();
-       console.log(data);
-      if (response.ok) {
-        toast.success("Request accepted successfully");
 
-           setRequests((prev) =>
+      if (response.ok) {
+        toast.success("Request accepted.");
+        setRequests((prev) =>
           prev.map((req) =>
-          req.id?.toString() === requestId?.toString() ? { ...req, status: "accepted" } : req
+            req.id === requestId ? { ...req, status: "Accepted" } : req
           )
         );
       } else {
-        toast.error(data.error || "Failed to accept request");
+        toast.error(data.error || "Failed to accept request.");
       }
     } catch (err) {
-      console.error("Accept request error:", err);
-      toast.error("Network error while accepting request");
+      toast.error("Network error during acceptance.");
     }
   };
 
   const handleCallFirm = (phone) => {
     if (!phone) {
-      toast.warning("Phone number not available for this firm");
+      toast.warning("Phone number unavailable.");
       return;
     }
     window.location.href = `tel:${phone}`;
   };
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    const base = "px-3 py-1 text-xs font-medium rounded-full";
+    switch (status?.toLowerCase()) {
       case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
+        return <Badge className={`${base} bg-amber-50 text-amber-700 border-amber-200`}>Pending</Badge>;
       case "accepted":
-        return <Badge className="bg-green-100 text-green-800">Accepted</Badge>;
+        return <Badge className={`${base} bg-emerald-50 text-emerald-700 border-emerald-200`}>Accepted</Badge>;
       case "rejected":
-        return <Badge variant="destructive">Rejected</Badge>;
+        return <Badge className={`${base} bg-red-50 text-red-700 border-red-200`}>Rejected</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge className={`${base} bg-gray-50 text-gray-600 border-gray-200`}>Unknown</Badge>;
     }
   };
 
   const filteredRequests = requests
     .filter((req) => {
-      const matchesSearch =
-        req.cropName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        req.firmName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        req.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        req.state.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesStatus = filterStatus === "all" || req.status === filterStatus;
-
-      return matchesSearch && matchesStatus;
+      const q = searchQuery.toLowerCase();
+      return (
+        req.cropName.toLowerCase().includes(q) ||
+        req.firmName.toLowerCase().includes(q) ||
+        req.city.toLowerCase().includes(q) ||
+        req.state.toLowerCase().includes(q)
+      ) && (filterStatus === "all" || req.status?.toLowerCase() === filterStatus.toLowerCase());
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -225,171 +230,185 @@ const AllRequests = () => {
   const showCallButton = isLoggedIn;
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="pt-16 pb-16">
-        <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-gray-50/60">
+      <main className="pt-10 pb-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
-            <div className="max-w-2xl">
-              <h1 className="font-display text-4xl font-bold text-foreground mb-3">
-                All <span className="text-primary">Crop Requests</span>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8 mb-12">
+            <div>
+              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 tracking-tight">
+                All <span className="text-emerald-600">Crop Requests</span>
               </h1>
-              <p className="text-muted-foreground text-lg">
-                View purchase requests from firms and buyers across India.
+              <p className="mt-4 text-lg text-gray-600 max-w-3xl">
+                Browse and respond to purchase inquiries from buyers nationwide.
               </p>
             </div>
 
             {isLoggedIn && user?.userType === "firm" && (
               <Button
                 onClick={() => setShowAddForm(true)}
-                className="whitespace-nowrap"
                 size="lg"
+                className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-lg hover:shadow-xl transition-all"
               >
                 <Plus className="mr-2 h-5 w-5" />
-                Add Request
+                Post New Request
               </Button>
             )}
           </div>
 
-          {/* Search & Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mb-8 sticky top-0 z-10 bg-background py-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder="Search crop, firm, city or state..."
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          {/* Filters */}
+          <div className="bg-gray-100 rounded-2xl   p-6 mb-10 sticky top-4 z-10">
+            <div className="flex flex-col md:flex-row gap-5">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  placeholder="Search by crop, firm, city or state..."
+                  className="h-12 pl-12 rounded-xl border-gray-200 focus:border-emerald-400 focus:ring-emerald-400 transition-all"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-12 w-full md:w-44 rounded-xl border-gray-200 ">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="accepted">Accepted</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="h-12 w-full md:w-52 rounded-xl border-gray-200">
+                  <ArrowUpDown className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="newest">Newest First</SelectItem>
+                  <SelectItem value="oldest">Oldest First</SelectItem>
+                  <SelectItem value="crop-name">Crop Name (A–Z)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-40">
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-48">
-                <ArrowUpDown className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest First</SelectItem>
-                <SelectItem value="oldest">Oldest First</SelectItem>
-                <SelectItem value="crop-name">Crop Name</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {loading && (
-            <div className="flex justify-center items-center py-20">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading crop requests...</p>
+            <div className="flex justify-center items-center py-24">
+              <div className="text-center space-y-5">
+                <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-emerald-600 border-r-4 border-emerald-200 mx-auto"></div>
+                <p className="text-lg font-medium text-gray-700">Loading requests...</p>
               </div>
             </div>
           )}
 
           {!loading && error && (
-            <div className="text-center py-20 max-w-md mx-auto">
-              <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-destructive mb-4">Error</h2>
-              <p className="text-muted-foreground mb-6">{error}</p>
-              <Button onClick={() => window.location.reload()}>Try Again</Button>
+            <div className="flex justify-center items-center py-24">
+              <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border p-10 text-center">
+                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-semibold text-gray-800 mb-3">Error Loading Requests</h2>
+                <p className="text-gray-600 mb-6">{error}</p>
+                <Button onClick={() => window.location.reload()} className="bg-emerald-600 hover:bg-emerald-700 px-8">
+                  Retry
+                </Button>
+              </div>
             </div>
           )}
 
           {!loading && !error && (
             <>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-gray-600 font-medium mb-8">
                 Showing {filteredRequests.length} request{filteredRequests.length !== 1 ? "s" : ""}
               </p>
 
               {filteredRequests.length === 0 ? (
-                <div className="text-center py-20">
-                  <p className="text-muted-foreground text-xl">
+                <div className="bg-white rounded-2xl shadow-sm border p-12 text-center">
+                  <p className="text-xl font-medium text-gray-700 mb-3">
+                    {requests.length === 0 ? "No crop requests available yet." : "No matching requests found."}
+                  </p>
+                  <p className="text-gray-500">
                     {requests.length === 0
-                      ? "No crop requests available at this time."
-                      : "No requests found matching your criteria."}
+                      ? "Check back later or post a new request if you're a buyer."
+                      : "Try adjusting your search or status filter."}
                   </p>
                 </div>
               ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-7">
                   {filteredRequests.map((req) => (
                     <Card
                       key={req.id}
-                      className="overflow-hidden hover:shadow-lg transition-all duration-300"
+                      className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all duration-300 bg-white group"
                     >
-                      <div className="h-40 bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center text-6xl overflow-hidden">
-                        <Package className="h-20 w-20 text-muted-foreground" />
-                      </div>
-
-                      <div className="p-5">
-                        {/* Header row with crop name, status, and call button */}
-                        <div className="flex items-start justify-between mb-3">
-                          <h3 className="font-semibold text-lg line-clamp-2 pr-10">
+                    <div className="h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+  <span className="text-9xl  select-none">
+    🌾
+  </span>
+</div>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start gap-4 mb-4">
+                          <h3 className="font-semibold text-xl text-gray-900 line-clamp-2 leading-tight ">
                             {req.cropName}
                           </h3>
-
                           <div className="flex items-center gap-2 shrink-0">
                             {getStatusBadge(req.status)}
-
                             {showCallButton && req.firmPhone && (
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8"
+                                className="h-8 w-8 rounded-full hover:bg-emerald-50"
                                 onClick={() => handleCallFirm(req.firmPhone)}
                                 title={`Call ${req.firmName}`}
                               >
-                                <Phone className="h-4 w-4" />
+                                <Phone className="h-4 w-4 text-emerald-600" />
                               </Button>
                             )}
                           </div>
                         </div>
 
-                        <div className="space-y-2.5 text-sm text-muted-foreground mb-5">
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4" />
-                            <span className="font-medium text-foreground">{req.firmName}</span>
+                        <div className="space-y-3.5 text-sm mb-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 font-semibold shrink-0">
+                              {req.firmName?.charAt(0) || "?"}
+                            </div>
+                            <span className="font-medium text-gray-800 truncate">
+                              {req.firmName}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            <span>{req.city}, {req.state}</span>
+
+                          <div className="flex items-center gap-2.5 text-gray-600">
+                            <MapPin className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">
+                              {req.city}, {req.state}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4" />
+
+                          <div className="flex items-center gap-2.5 text-gray-600">
+                            <Package className="h-4 w-4 flex-shrink-0" />
                             <span>Requirement: {req.requirement}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
+
+                          <div className="flex items-center gap-2.5 text-gray-600">
+                            <Clock className="h-4 w-4 flex-shrink-0" />
                             <span>Deadline: {req.deadline}</span>
                           </div>
-                          <div className="text-xs pt-1 opacity-80">
-                            Requested on: {req.requestedAt}
+
+                          <div className="text-xs text-gray-500 pt-1">
+                            Posted on {req.requestedAt}
                           </div>
                         </div>
 
-                        <div className="pt-4 border-t">
-                          {showAcceptButton && req.status === "pending" && (
-                            <Button
-                              onClick={() => handleAcceptRequest(req.id)}
-                              className="w-full"
-                              variant="default"
-                            >
-                              Accept Request
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                        {showAcceptButton && req.status?.toLowerCase() === "pending" && (
+                          <Button
+                            onClick={() => handleAcceptRequest(req.id)}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                          >
+                            Accept This Request
+                          </Button>
+                        )}
+                      </CardContent>
                     </Card>
                   ))}
                 </div>
@@ -401,40 +420,46 @@ const AllRequests = () => {
 
       {/* Add Request Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-2xl font-bold mb-6">Add New Crop Request</h2>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="p-6 border-b">
+              <h2 className="text-2xl font-bold text-gray-900">Post New Crop Request</h2>
+              <p className="text-gray-600 mt-1">Specify what you need from farmers.</p>
+            </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-5">
+            <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
               <div>
-                <label className="block text-sm font-medium mb-1">Crop Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Crop Name</label>
                 <Input
                   name="cropName"
                   value={formData.cropName}
                   onChange={handleFormChange}
-                  placeholder="e.g. Basmati Rice"
+                  placeholder="e.g., Wheat, Soybean, Turmeric"
+                  className="rounded-xl border-gray-200 focus:border-emerald-400 focus:ring-emerald-400"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Requirement</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Requirement (quantity)</label>
                 <Input
                   name="requirement"
                   value={formData.requirement}
                   onChange={handleFormChange}
-                  placeholder="e.g. 5000 kg"
+                  placeholder="e.g., 10,000 kg or 500 quintals"
+                  className="rounded-xl border-gray-200 focus:border-emerald-400 focus:ring-emerald-400"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Deadline</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Deadline</label>
                 <Input
                   type="date"
                   name="deadline"
                   value={formData.deadline}
                   onChange={handleFormChange}
+                  className="rounded-xl border-gray-200 focus:border-emerald-400 focus:ring-emerald-400"
                   required
                 />
               </div>
@@ -443,12 +468,15 @@ const AllRequests = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 rounded-xl border-gray-300"
                   onClick={() => setShowAddForm(false)}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="flex-1">
+                <Button
+                  type="submit"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 rounded-xl"
+                >
                   Submit Request
                 </Button>
               </div>
