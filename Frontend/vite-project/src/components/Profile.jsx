@@ -3,6 +3,7 @@ import {useContext} from "react";
 // import FarmerProfile from "./FarmerProfile";
 import FarmerDashboard from "./FarmerDashboard";
 import FirmProfilePage from "./FirmProfilePage";
+import { useParams,useSearchParams } from "react-router-dom";
 
 const Profile = () => {
     const {user} = useContext(AuthContext);

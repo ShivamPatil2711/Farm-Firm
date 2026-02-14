@@ -1,17 +1,21 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "./AuthContext"; // adjust path if needed
-import { toast } from "react-toastify";
+import { AuthContext } from "./AuthContext";
+import { toast } from "react-toastify"; // kept only for success (can remove if unwanted)
 
 const LoginPage = () => {
   const { setIsLoggedIn, setUser } = useContext(AuthContext);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // ── Custom error state ──
+  const [showErrors, setShowErrors] = useState(false);
+  const [errorMessages, setErrorMessages] = useState([]);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    userType: "farmer", // default role
+    userType: "farmer",
   });
 
   const navigate = useNavigate();
@@ -22,9 +26,27 @@ const LoginPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const showErrorAlert = (messages) => {
+    setErrorMessages(Array.isArray(messages) ? messages : [messages]);
+    setShowErrors(true);
+  };
+
+  // Auto-hide error alert after 5 seconds
+  useEffect(() => {
+    let timer;
+    if (showErrors) {
+      timer = setTimeout(() => {
+        setShowErrors(false);
+      }, 3000);
+    }
+    return () => clearTimeout(timer); // cleanup on unmount or when showErrors changes
+  }, [showErrors]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setShowErrors(false);           // hide previous errors
+    setErrorMessages([]);
 
     try {
       const response = await fetch(`${backendApiUrl}/api/login`, {
@@ -34,7 +56,7 @@ const LoginPage = () => {
         body: JSON.stringify({
           email: formData.email.trim(),
           password: formData.password.trim(),
-          userType: formData.userType, // ← sending role to backend
+          userType: formData.userType,
         }),
       });
 
@@ -43,15 +65,15 @@ const LoginPage = () => {
       if (response.ok) {
         toast.success(data.message || "Logged in successfully");
         setIsLoggedIn(true);
-        console.log(data.user);
         setUser(data.user);
         navigate("/");
       } else {
-        toast.error(data.error || data.message || "Login failed");
+        // Show custom error UI
+        showErrorAlert(data.error || data.message || "Login failed");
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast.error("An error occurred. Please try again.");
+      showErrorAlert("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -99,6 +121,32 @@ const LoginPage = () => {
               Create one
             </Link>
           </p>
+
+          {/* ── Custom Error Alert ── */}
+          {showErrors && errorMessages.length > 0 && (
+            <div
+              id="error-alert"
+              className="bg-orange-50 text-orange-800 border border-orange-300 p-6 rounded-lg mb-6 relative shadow-md"
+              role="alert"
+            >
+              <h2 className="text-lg font-semibold text-orange-900 mb-3">Error:</h2>
+              <button
+                type="button"
+                onClick={() => setShowErrors(false)}
+                className="absolute top-3 right-3 text-2xl font-bold text-orange-600 hover:text-orange-800 focus:outline-none transition-colors duration-200"
+                aria-label="Close alert"
+              >
+                ×
+              </button>
+              <ul className="pl-6 list-disc space-y-1">
+                {errorMessages.map((error, idx) => (
+                  <li key={idx} className="text-sm">
+                    {error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Role Selection */}
           <div className="mb-8">

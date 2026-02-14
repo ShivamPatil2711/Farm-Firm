@@ -7,6 +7,7 @@ const Request = require('../models/Request');     // your Farmer model
 const FirmRequest=require('../models/FirmRequest');
 const Firm = require('../models/Firm');     // your Firm model
 const sendSMS = require('../servicesms'); // Twilio SMS service
+const mongoose = require('mongoose');
 // ────────────────────────────────────────────────
 //            Multer Configuration (Local Storage)
 // ────────────────────────────────────────────────
@@ -156,10 +157,6 @@ exports.PostAddCrop = [
     }
   }
 ];
-const mongoose = require('mongoose');
-const Crop = require('../models/Crop');     // your Crop model
-// assuming authenticated user is a Farmer
-
 exports.getMyListedCrops = async (req, res) => {
   try {
     // 1. Authentication check
@@ -251,13 +248,20 @@ exports.acceptCropRequest = async (req, res) => {
         error: `Request is already ${request.status}`
       });
     }
-
     // Update status
     request.status = "Accepted";
     await request.save();
-
-    // 🔔 SEND SMS TO FIRM
-    const firm = await Firm.findById(request.firmId);
+    const Crop=await crop.findById({_id:request.cropId._id});
+    if( Crop.totalavailable<request.requirement){
+      return res.status(400).json({
+        success: false,
+        error: `Insufficient crop quantity available`
+      });
+    }
+    Crop.totalavailable=Crop.totalavailable - request.requirement;
+    await Crop.save();
+     // 🔔 SEND SMS TO FIRM
+   /* const firm = await Firm.findById(request.firmId);
 
     if (firm && firm.phoneNumber) {
       const smsText = `
@@ -271,7 +275,7 @@ Please check the app for next steps.
       sendSMS(firm.phoneNumber, smsText).catch(err =>
         console.error("SMS failed:", err.message)
       );
-    }
+    }*/
 
     return res.status(200).json({
       success: true,

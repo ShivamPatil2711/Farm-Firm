@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect ,useContext} from "react";
 import { useNavigate, Link } from "react-router-dom";
-
 import { Input } from "./Input";
 import { Button } from "./Button";
 import { Card, CardContent } from "./Card"; // assuming you have CardContent
@@ -13,6 +12,7 @@ import {
   SelectValue,
 } from "./Select";
 import { Search, Filter, ArrowUpDown, Star, MapPin, Package, Plus } from "lucide-react";
+import { AuthContext } from "./AuthContext";
 
 const BACKEND_URL = "http://localhost:4003";
 
@@ -22,7 +22,7 @@ const CropPage = () => {
   const [crops, setCrops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+const { user ,isLoggedIn } = useContext(AuthContext);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("price-low");
   const [filterQuality, setFilterQuality] = useState("all");
@@ -142,7 +142,8 @@ C: "bg-amber-100 text-amber-800 border-amber-200",         // Average / Pass
               </p>
             </div>
 
-            <Button
+        {isLoggedIn && user.userType==='farmer' &&<>
+         <Button
               onClick={() => navigate("/add-crop")}
               size="lg"
               className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
@@ -150,6 +151,7 @@ C: "bg-amber-100 text-amber-800 border-amber-200",         // Average / Pass
               <Plus className="mr-2 h-5 w-5" />
               List Your Crop
             </Button>
+        </>}
           </div>
 
           {/* Filters */}

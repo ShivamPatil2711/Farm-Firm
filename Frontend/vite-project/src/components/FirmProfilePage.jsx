@@ -24,6 +24,10 @@ import {
     IndianRupee,
     Star,
     MapPinIcon,
+    UserPlus,
+    CheckCircle2,
+    XCircle,
+    AlertCircle,
 } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
@@ -40,6 +44,9 @@ const FirmProfilePage = () => {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [searchQuery, setSearchQuery] = useState("");
 
+    // ── New state for pending friend requests ──
+    const [friendRequests, setFriendRequests] = useState([]);
+    const [friendRequestsLoading, setFriendRequestsLoading] = useState(true);
 
     useEffect(() => {
         if (!isLoggedIn) {
@@ -76,7 +83,6 @@ const FirmProfilePage = () => {
                     const requestsData = await requestsResponse.json();
                     console.log("Fetched firm requests data:", requestsData);
                     if (requestsData.success) {
-
                         setMyRequests(requestsData.crop || []);
                     }
                 }
@@ -94,16 +100,77 @@ const FirmProfilePage = () => {
                         setFarmers(farmersData.farmers || []);
                     }
                 }
+
+                // ── NEW: Fetch pending friend requests received by this firm ──
+                const friendReqResponse = await fetch(`${BACKEND_URL}/api/friend-requests/${user._id }`, {
+                    method: "GET",
+                    credentials: "include",
+                });
+
+                if (friendReqResponse.ok) {
+                    const reqData = await friendReqResponse.json();
+                    setFriendRequests(reqData.requests || []);
+                }
+
             } catch (err) {
                 console.error("Error fetching profile:", err);
                 setError(err.message);
             } finally {
                 setLoading(false);
+                setFriendRequestsLoading(false);
             }
         };
 
         fetchProfileData();
     }, [user, isLoggedIn, navigate]);
+
+    const handleAcceptRequest = async (requestId) => {
+        if (!confirm("Accept this friend request?")) return;
+
+        try {
+            const res = await fetch(
+                `${BACKEND_URL}/api/friend-requests/accept/${requestId}`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                }
+            );
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || "Failed to accept request");
+            }
+
+            setFriendRequests(prev => prev.filter(req => req._id !== requestId));
+            alert("Friend request accepted.");
+        } catch (err) {
+            console.error("Accept friend request failed:", err);
+            alert(err.message || "Could not accept friend request");
+        }
+    };
+
+    const handleRejectRequest = async (requestId) => {
+        if (!confirm("Reject this friend request? This action cannot be undone.")) return;
+
+        try {
+                   const res = await fetch(`${BACKEND_URL}/api/friend-requests/reject/${requestId}`, {
+                method: "POST",
+                credentials: "include",
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || "Failed to reject request");
+            }
+
+            setFriendRequests(prev => prev.filter(req => req._id !== requestId));
+            alert("Friend request rejected.");
+        } catch (err) {
+            console.error("Reject friend request failed:", err);
+            alert(err.message || "Could not reject friend request");
+        } 
+    };
 
     // Calculate stats
     const totalPurchases = myRequests.filter((req) => req.status === "accepted" || req.status === "Accepted").length;
@@ -139,87 +206,6 @@ const FirmProfilePage = () => {
 
     return (
         <div className="flex min-h-screen bg-background">
-            {/* Sidebar */}
-            {/* <aside className="w-64 bg-[#1a1f1a] text-white flex flex-col">
-                Logo
-                <div className="p-6 border-b border-white/10">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-firm rounded-lg flex items-center justify-center">
-                            <Building2 className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-xl font-bold">KrishiConnect</span>
-                    </div>
-                </div>
-
-               
-                <div className="p-6 border-b border-white/10">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-firm/20 rounded-full flex items-center justify-center">
-                            <Building2 className="h-6 w-6 text-firm" />
-                        </div>
-                        <div>
-                            <p className="font-semibold">{profileData?.CompanyName}</p>
-                            <p className="text-sm text-white/60">Firm</p>
-                        </div>
-                    </div>
-                </div>
-
-              
-                <nav className="flex-1 p-4">
-                    <button
-                        onClick={() => setActiveTab("dashboard")}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === "dashboard"
-                                ? "bg-firm text-white"
-                                : "text-white/70 hover:bg-white/5"
-                            }`}
-                    >
-                        <LayoutDashboard className="h-5 w-5" />
-                        <span>Dashboard</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab("find-farmers")}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === "find-farmers"
-                                ? "bg-firm text-white"
-                                : "text-white/70 hover:bg-white/5"
-                            }`}
-                    >
-                        <Search className="h-5 w-5" />
-                        <span>Find Farmers</span>
-                    </button>
-
-                    <button
-                        onClick={() => navigate("/my-requests")}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 text-white/70 hover:bg-white/5 transition-colors"
-                    >
-                        <History className="h-5 w-5" />
-                        <span>Transactions</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab("market-prices")}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === "market-prices"
-                                ? "bg-firm text-white"
-                                : "text-white/70 hover:bg-white/5"
-                            }`}
-                    >
-                        <TrendingUp className="h-5 w-5" />
-                        <span>Market Prices</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab("settings")}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${activeTab === "settings"
-                                ? "bg-firm text-white"
-                                : "text-white/70 hover:bg-white/5"
-                            }`}
-                    >
-                        <Settings className="h-5 w-5" />
-                        <span>Settings</span>
-                    </button>
-                </nav>
-            </aside>  */}
-
             {/* Main Content */}
             <main className="flex-1 overflow-auto">
                 <div className="container mx-auto px-8 py-8 max-w-7xl">
@@ -328,7 +314,6 @@ const FirmProfilePage = () => {
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            {/* Sample Farmer Cards */}
                                             {farmers.map((farmer) => (
                                                 <Card key={farmer._id} className="hover:shadow-md transition-shadow">
                                                     <CardContent className="p-6">
@@ -360,15 +345,16 @@ const FirmProfilePage = () => {
                                                                 <Badge key={crop._id} className="bg-blue-500/10 text-blue-600 border-blue-500/30">
                                                                     {crop.cropname}
                                                                 </Badge>
-                                                            ) )}
+                                                            ))}
                                                         </div>
                                                         <div className="flex items-center justify-between">
                                                             <p className="text-sm text-muted-foreground">
                                                                 45 sales completed
                                                             </p>
-                                                            
-                                                            <Phone className="h-4 w-4 mr-2" />
-                                                            {farmer.phoneNumber}
+                                                            <div className="flex items-center text-sm text-muted-foreground">
+                                                                <Phone className="h-4 w-4 mr-2" />
+                                                                {farmer.phoneNumber}
+                                                            </div>
                                                         </div>
                                                     </CardContent>
                                                 </Card>
@@ -379,7 +365,96 @@ const FirmProfilePage = () => {
                             </Card>
                         </div>
 
-                     
+                        {/* ── Pending Friend Requests (right column) ── */}
+                        <div className="lg:col-span-1">
+                            <Card className="h-full shadow-md">
+                                <div className="px-6 py-4 border-b bg-muted/40">
+                                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                                        <UserPlus className="h-5 w-5 text-amber-600" />
+                                        Pending Friend Requests
+                                    </h3>
+                                </div>
+                                <CardContent className="p-6">
+                                    {friendRequestsLoading ? (
+                                        <div className="flex flex-col items-center justify-center py-10">
+                                            <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                                            <p className="text-sm text-muted-foreground">Loading requests...</p>
+                                        </div>
+                                    ) : friendRequests.length === 0 ? (
+                                        <div className="text-center py-10 text-muted-foreground">
+                                            <UserPlus className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                            <p>No pending friend requests</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {friendRequests.map((req) => (
+                                                <div
+                                                    key={req._id}
+                                                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-muted/30 rounded-lg border border-border"
+                                                >
+                                                    <div className="flex items-center gap-3 flex-1">
+                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                                            <UserPlus className="h-5 w-5 text-primary" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-medium truncate">
+                                                                {req.senderType === "farmer"
+                                                                    ? `${req.sender?.FirstName || ""} ${req.sender?.LastName || ""}`
+                                                                    : req.sender?.CompanyName || "Unknown Sender"}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {req.sender?.city && req.sender?.state
+                                                                    ? `${req.sender.city}, ${req.sender.state}`
+                                                                    : "Location not available"}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                                {new Date(req.timestamp || req.createdAt).toLocaleDateString("en-IN", {
+                                                                    day: "numeric",
+                                                                    month: "short",
+                                                                    year: "numeric",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                                            onClick={() => handleAcceptRequest(req._id)}
+                                                            disabled={req.isProcessing}
+                                                        >
+                                                            {req.isProcessing ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                                            ) : (
+                                                                <CheckCircle2 className="h-4 w-4 mr-1" />
+                                                            )}
+                                                            Accept
+                                                        </Button>
+
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() => handleRejectRequest(req._id)}
+                                                            disabled={req.isProcessing}
+                                                        >
+                                                            {req.isProcessing ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                                                            ) : (
+                                                                <XCircle className="h-4 w-4 mr-1" />
+                                                            )}
+                                                            Reject
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
                 </div>
             </main>

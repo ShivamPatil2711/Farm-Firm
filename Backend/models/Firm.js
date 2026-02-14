@@ -6,7 +6,9 @@ const firmSchema = mongoose.Schema({// Structure of the Table BLUEPRINT OF THE T
   password: { type: String, required: true },
   phoneNumber: { type: String, required: true },
  city: { type: String, required: true },
-  state: { type: String, required: true }
+  state: { type: String, required: true },
+  farmerfriend:[{type:mongoose.Schema.Types.ObjectId,ref:"Farmer"}],
+  firmfriend:[{type:mongoose.Schema.Types.ObjectId,ref:"Firm"}],
 }
 );
 module.exports = mongoose.model("Firm", firmSchema);// Class name Firm + it acts as both class + table

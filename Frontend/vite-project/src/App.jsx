@@ -16,6 +16,7 @@ import FarmerRequests from "./components/FarmerRequests"
 import Profile from "./components/Profile";
 import AllRequests from "./components/AllRequests";
 import Admin from "./components/Admin";
+import FriendProfile from "./components/FriendProfile";
 function App() {
 
   const router = createBrowserRouter([
@@ -77,6 +78,14 @@ function App() {
           element:(
             <ProtectedRoute>
             <Profile />
+            </ProtectedRoute>
+          )
+        },
+          {
+          path:"/profile/:id",
+          element:(
+            <ProtectedRoute>
+            <FriendProfile />
             </ProtectedRoute>
           )
         },

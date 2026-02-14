@@ -2,9 +2,15 @@ import { useState, useContext } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "./AuthContext"; // Adjust path if needed
 import { toast } from "react-toastify";
+import { useRef  ,useEffect} from "react";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+
+  // ──── NEW ──── added for search functionality
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+   const [allUsers, setAllUsers] = useState([]); // This will hold the list of all farmers and firms for search
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -30,7 +36,46 @@ const Navbar = () => {
   ];
 
   const isActive = (path) => location.pathname === path;
+  const inputRef = useRef(null);
 
+   // simple filter — shows up to 6 matching results
+  const filteredSuggestions =allUsers
+    .filter(user => 
+      user.name.toLowerCase().startsWith(searchQuery.toLowerCase().trim()) || 
+      user.city.toLowerCase().startsWith(searchQuery.toLowerCase().trim()) ||
+       user.state.toLowerCase().startsWith(searchQuery.toLowerCase().trim())
+
+    )
+    .slice(0, 6);
+  // ──────────────
+useEffect(() => {
+    const fetchAllUsers = async () => {
+            try {
+        const response = await fetch(`${backendApiUrl}/api/users`,   // ← fixed: used environment variable + template literal
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+
+        const data = await response.json();
+console.log("Fetched users for search:", data); // Debug log
+        if (response.ok) {
+          setAllUsers(data); // expected: array of { id, name, userType, ... }
+        } else {
+          console.error("Failed to fetch users:", data.error || response.statusText);
+          setFetchError(data.error || "Failed to load user list");
+        }
+      } catch (err) {
+        console.error("Network error while fetching users:", err);
+        setFetchError("Could not connect to server");
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchAllUsers();
+  }, []);
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
@@ -41,7 +86,7 @@ const Navbar = () => {
       });
 
       const data = await response.json();
-
+console.log("Logout response:", data); // Debug log
       if (response.ok) {
         toast.success(data.message || "Logged out successfully");
       } else {
@@ -82,7 +127,6 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-{console.log(user)}
             {/* Conditional links based on user type */}
             {isLoggedIn && user?.userType === "firm" &&
               firmLinks.map((link) => (
@@ -109,7 +153,63 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
+
+          {isLoggedIn &&  
+           <div className="relative">
+                {/* ──── MODIFIED: added value, onChange, onFocus ──── */}
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Search farmers or firms..."
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full md:w-64"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(e.target.value.trim().length > 0);
+                  }}
+                  onFocus={() => {
+                    if (searchQuery.trim().length > 0) {
+                      setShowSuggestions(true);
+                    }
+                  }}
+                />
+
+                {/* ──── NEW: suggestion dropdown ──── */}
+                {showSuggestions && (
+                  <div 
+                    className="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-50 text-sm"
+                  >
+                    {filteredSuggestions.length > 0 ? (
+                      filteredSuggestions.map((item) => (
+                      <button
+  key={item._id || item.id}
+  type="button"
+  className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+  onClick={() => {
+navigate(`/profile/${item.id}?userType=${item.userType}`);
+setShowSuggestions(false);}}
+>
+  <span className="font-medium text-gray-900 ">
+    {item.name || "Unnamed"}
+  </span>
+
+  <span className="text-xs text-gray-500 whitespace-nowrap">
+    {item.userType || "user"} • {item.city || "—"}, {item.state || "—"}
+  </span>
+</button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-gray-500 italic">
+                        No matching farmers or firms found
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* ────────────────────────────────────── */}
+              </div>
+}
           </div>
+            
 
           {/* Desktop Auth Section */}
           <div className="hidden md:flex items-center gap-4">
@@ -241,5 +341,4 @@ const Navbar = () => {
     </nav>
   );
 };
-
 export default Navbar;
