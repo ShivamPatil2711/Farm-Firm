@@ -135,10 +135,11 @@ exports.acceptFriendRequest = async (req, res) => {
     if (!request) {
       return res.status(404).json({ message: 'Friend request not found' });
     }
-    
+   
     const { senderId, receiverId, senderType, receiverType } = request;
 
     await FriendRequest.deleteOne({ _id: reqId });
+    await FriendRequest.deleteOne({ senderId: receiverId, receiverId: senderId, senderType: receiverType, receiverType: senderType }); // Remove any reverse request if exists
     // Validate sender and receiver types
     if (!['farmer', 'firm'].includes(senderType) || !['farmer', 'firm'].includes(receiverType)) {
       return res.status(400).json({ message: 'Invalid sender or receiver type' });
