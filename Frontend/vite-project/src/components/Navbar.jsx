@@ -69,9 +69,7 @@ console.log("Fetched users for search:", data); // Debug log
       } catch (err) {
         console.error("Network error while fetching users:", err);
         setFetchError("Could not connect to server");
-      } finally {
-        setLoadingUsers(false);
-      }
+      } 
     };
 
     fetchAllUsers();
@@ -187,6 +185,7 @@ console.log("Logout response:", data); // Debug log
   className="w-full px-4 py-2.5 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
   onClick={() => {
 navigate(`/profile/${item.id}?userType=${item.userType}`);
+setSearchQuery("");
 setShowSuggestions(false);}}
 >
   <span className="font-medium text-gray-900 ">

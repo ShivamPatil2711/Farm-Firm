@@ -7,19 +7,18 @@ const Firm = require('../models/Firm');
 exports.postLogin = async (req, res, next) => {
   try {
         const { email, password ,userType} = req.body;
-        console.log('AA',req.body);
-        let existingUser;
+             let existingUser;
     if (userType === 'farmer') {
   existingUser = await Farmer.findOne({ email });
 } else {
   existingUser = await Firm.findOne({ email });
 }
-        console.log(existingUser);
-    if (!existingUser) {
+  if (!existingUser) {
       return res.status(401).json({ error: 'Invalid Credentials' });
     }
     const isPasswordValid = await bcrypt.compare(password, existingUser.password);
-    if (!isPasswordValid) {
+
+       if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid Credentials' });
     }
     const token = jwt.sign(
