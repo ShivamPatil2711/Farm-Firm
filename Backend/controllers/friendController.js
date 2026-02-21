@@ -65,6 +65,7 @@ exports.getFriendProfile = async (req, res) => {
 exports.PostFriendRequest = async (req, res) => {
   try {
     const { senderId, receiverId, senderType, receiverType } = req.body;
+
     // Validate sender and receiver types
     if (!['farmer', 'firm'].includes(senderType) || !['farmer', 'firm'].includes(receiverType)) {
       return res.status(400).json({ message: 'Invalid sender or receiver type' });
@@ -81,7 +82,16 @@ exports.PostFriendRequest = async (req, res) => {
     if (existingRequest) {
       return res.status(400).json({ message: 'Friend request already sent' });
     }
-    if(senderType==="farmer" && receiverType==="farmer"){
+    const reverseRequest = await FriendRequest.findOne({
+      senderId: receiverId,
+      receiverId: senderId,
+      senderType: receiverType,
+      receiverType: senderType,
+    }); 
+    if(reverseRequest){
+      return res.status(400).json({ message: `Friend request already sent. Please accept it from your profile.` });
+    }
+       if(senderType==="farmer" && receiverType==="farmer"){
       const sender = await Farmer.findById(senderId);
       if (!sender) {
         return res.status(404).json({ message: 'Sender not found' });

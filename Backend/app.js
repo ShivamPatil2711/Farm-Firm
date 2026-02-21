@@ -52,7 +52,6 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return next();
 
   const token = req.cookies.Usercookie;
-  console.log(token);
   if (!token) {
     req.isLoggedIn = false;
     req.user = null;

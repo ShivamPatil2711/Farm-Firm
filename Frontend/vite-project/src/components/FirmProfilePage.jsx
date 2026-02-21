@@ -399,67 +399,92 @@ const FirmProfilePage = () => {
                                     ) : (
                                         <div className="space-y-4">
                                             {friendRequests.map((req) => (
-                                                <div
-                                                    key={req._id}
-                                                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-muted/30 rounded-lg border border-border"
-                                                >
-                                                    <div className="flex items-center gap-3 flex-1">
-                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                                            <UserPlus className="h-5 w-5 text-primary" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="font-medium truncate">
-                                                                {req.senderType === "farmer"
-                                                                    ? `${req.sender?.FirstName || ""} ${req.sender?.LastName || ""}`
-                                                                    : req.sender?.CompanyName || "Unknown Sender"}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {req.sender?.city && req.sender?.state
-                                                                    ? `${req.sender.city}, ${req.sender.state}`
-                                                                    : "Location not available"}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                                                {new Date(req.timestamp || req.createdAt).toLocaleDateString("en-IN", {
-                                                                    day: "numeric",
-                                                                    month: "short",
-                                                                    year: "numeric",
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit",
-                                                                })}
-                                                            </p>
-                                                        </div>
-                                                    </div>
+                                               <div
+  key={req._id}
+  className="flex flex-col gap-5 p-4 sm:p-5 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow duration-200"
+>
+  {/* Header / Sender Info */}
+  <div className="flex items-start gap-3.5">
+    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+      <UserPlus className="h-5 w-5 text-primary" />
+    </div>
 
-                                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                                        <Button
-                                                            size="sm"
-                                                            className="bg-green-600 hover:bg-green-700 text-white"
-                                                            onClick={() => handleAcceptRequest(req._id)}
-                                                            disabled={req.isProcessing}
-                                                        >
-                                                            {req.isProcessing ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                                                            ) : (
-                                                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                                            )}
-                                                            Accept
-                                                        </Button>
+    <div className="min-w-0 flex-1">
+      <p className="font-semibold text-base leading-tight truncate">
+        {req.senderType === "farmer"
+          ? `${req.sender?.FirstName || ""} ${req.sender?.LastName || ""}`.trim() || "Unknown Farmer"
+          : req.sender?.CompanyName || "Unknown Company"}
+      </p>
 
-                                                        <Button
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            onClick={() => handleRejectRequest(req._id)}
-                                                            disabled={req.isProcessing}
-                                                        >
-                                                            {req.isProcessing ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                                                            ) : (
-                                                                <XCircle className="h-4 w-4 mr-1" />
-                                                            )}
-                                                            Reject
-                                                        </Button>
-                                                    </div>
-                                                </div>
+      <p className="mt-0.5 text-sm text-muted-foreground truncate">
+        {req.sender?.city && req.sender?.state
+          ? `${req.sender.city}, ${req.sender.state}`
+          : "Location not available"}
+      </p>
+
+      <p className="mt-1 text-xs text-muted-foreground/80">
+        {new Date(req.timestamp || req.createdAt).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </p>
+    </div>
+  </div>
+
+  {/* Action Buttons – Responsive & Joined Style */}
+ <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-3 min-w-0">
+  <button
+    type="button"
+    className={`
+      flex items-center justify-center gap-2
+      flex-1 sm:flex-none px-5 py-2.5
+      text-sm font-medium
+      bg-green-600 hover:bg-green-700 active:bg-green-800
+      text-white
+      rounded-lg shadow-sm
+      transition-all duration-150
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2
+      disabled:opacity-60 disabled:pointer-events-none disabled:shadow-none
+    `}
+    onClick={() => handleAcceptRequest(req._id)}
+    disabled={req.isProcessing}
+  >
+    {req.isProcessing ? (
+      <Loader2 className="h-4 w-4 animate-spin" />
+    ) : (
+      <CheckCircle2 className="h-4 w-4" />
+    )}
+    Accept
+  </button>
+
+  <button
+    type="button"
+    className={`
+      flex items-center justify-center gap-2
+      flex-1 sm:flex-none px-5 py-2.5
+      text-sm font-medium
+      bg-red-600 hover:bg-red-700 active:bg-red-800
+      text-white
+      rounded-lg shadow-sm
+      transition-all duration-150
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
+      disabled:opacity-60 disabled:pointer-events-none disabled:shadow-none
+    `}
+    onClick={() => handleRejectRequest(req._id)}
+    disabled={req.isProcessing}
+  >
+    {req.isProcessing ? (
+      <Loader2 className="h-4 w-4 animate-spin" />
+    ) : (
+      <XCircle className="h-4 w-4" />
+    )}
+    Reject
+  </button>
+</div>
+</div>
                                             ))}
                                         </div>
                                     )}
