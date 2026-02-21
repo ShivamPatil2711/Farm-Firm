@@ -1,8 +1,8 @@
-import { useState, useEffect ,useContext} from "react";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Input } from "./Input";
 import { Button } from "./Button";
-import { Card, CardContent } from "./Card"; // assuming you have CardContent
+import { Card, CardContent } from "./Card";
 import { Badge } from "./Badge";
 import {
   Select,
@@ -12,24 +12,20 @@ import {
   SelectValue,
 } from "./Select";
 import { Search, Filter, ArrowUpDown, Star, MapPin, Package, Plus } from "lucide-react";
-import { AuthContext } from "./AuthContext"
-
-
+import { AuthContext } from "./AuthContext";
 
 const BACKEND_URL = "http://localhost:4003";
 
 const CropPage = () => {
   const navigate = useNavigate();
+  const { user, isLoggedIn } = useContext(AuthContext);
 
   const [crops, setCrops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-const { user ,isLoggedIn } = useContext(AuthContext);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("price-low");
   const [filterQuality, setFilterQuality] = useState("all");
-
-
 
   useEffect(() => {
     const fetchCrops = async () => {
@@ -42,9 +38,11 @@ const { user ,isLoggedIn } = useContext(AuthContext);
           credentials: "include",
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const data = await response.json();
+        console.log("Fetched crops:", data);
+
         if (data.success) {
           const normalized = data.crops.map((crop) => ({
             id: crop._id,
@@ -61,6 +59,7 @@ const { user ,isLoggedIn } = useContext(AuthContext);
             quality: crop.grade || "B",
             image: crop.img || null,
             available: crop.totalavailable || 0,
+            buyers: crop.buyers || [], // array of populated Firm documents
           }));
 
           setCrops(normalized);
@@ -80,9 +79,9 @@ const { user ,isLoggedIn } = useContext(AuthContext);
 
   const getQualityStyles = (quality) => {
     const styles = {
-      A: "bg-emerald-100 text-emerald-800 border-emerald-200",   // Excellent / Distinction
-      B: "bg-blue-100 text-blue-800 border-blue-200",           // Good / Above average
-      C: "bg-amber-100 text-amber-800 border-amber-200",         // Average / Pass
+      A: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      B: "bg-blue-100 text-blue-800 border-blue-200",
+      C: "bg-amber-100 text-amber-800 border-amber-200",
     };
     return styles[quality] || "bg-gray-50 text-gray-600 border-gray-200";
   };
@@ -98,11 +97,16 @@ const { user ,isLoggedIn } = useContext(AuthContext);
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case "price-low": return a.price - b.price;
-        case "price-high": return b.price - a.price;
-        case "quantity": return b.available - a.available;
-        case "rating": return b.farmerRating - a.farmerRating;
-        default: return 0;
+        case "price-low":
+          return a.price - b.price;
+        case "price-high":
+          return b.price - a.price;
+        case "quantity":
+          return b.available - a.available;
+        case "rating":
+          return b.farmerRating - a.farmerRating;
+        default:
+          return 0;
       }
     });
 
@@ -146,7 +150,7 @@ const { user ,isLoggedIn } = useContext(AuthContext);
               </p>
             </div>
 
-            {isLoggedIn && (user?.userType === "farmer") && (
+            {isLoggedIn && user?.userType === "farmer" && (
               <Button
                 onClick={() => navigate("/add-crop")}
                 size="lg"
@@ -156,20 +160,10 @@ const { user ,isLoggedIn } = useContext(AuthContext);
                 List Your Crop
               </Button>
             )}
-        {isLoggedIn && user.userType==='farmer' &&<>
-         <Button
-              onClick={() => navigate("/add-crop")}
-              size="lg"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              List Your Crop
-            </Button>
-        </>}
           </div>
 
           {/* Filters */}
-          <div className="bg-gray-100 rounded-xl  p-5 mb-10">
+          <div className="bg-gray-100 rounded-xl p-5 mb-10">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -284,6 +278,35 @@ const { user ,isLoggedIn } = useContext(AuthContext);
 
                       <div className="text-gray-600">
                         Min order: <span className="font-medium">{crop.minquantity} {crop.unit}</span>
+                      </div>
+
+                      {/* Buyers Section */}
+                      <div className="pt-2 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 font-medium mb-1.5 flex items-center gap-1.5">
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          Bought by friends
+                        </p>
+                        {crop.buyers && crop.buyers.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {crop.buyers.slice(0, 3).map((buyer, index) => (
+                              <p
+                                key={index}
+                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200 truncate max-w-[140px]"
+                              >
+                                {buyer.CompanyName || "Firm"}
+                              </p>
+                            ))}
+                            {crop.buyers.length > 3 && (
+                              <span className="text-xs text-gray-500 self-center">
+                                +{crop.buyers.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500 italic">
+                            No friends bought this crop yet
+                          </p>
+                        )}
                       </div>
                     </div>
 

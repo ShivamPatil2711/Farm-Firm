@@ -10,5 +10,6 @@ city:{type:String,required:true},
 state:{type:String,required:true},
 farmerfriend:[{type:mongoose.Schema.Types.ObjectId,ref:"Farmer"}],
 firmfriend:[{type:mongoose.Schema.Types.ObjectId,ref:"Firm"}],
+firmsbuyer:[{type:mongoose.Schema.Types.ObjectId,ref:"Firm"}],
 });
 module.exports=mongoose.model("Farmer",FarmerSchema);// Class name Farmer + it acts as both class + table

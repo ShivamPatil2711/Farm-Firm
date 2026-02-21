@@ -200,34 +200,79 @@ exports.getMyListedCrops = async (req, res) => {
 };
 exports.getRequestedCrops = async (req, res) => {
   try {
+
     // Ensure only logged-in farmer can access
     if (!req.isLoggedIn || !req.user) {
       return res.status(401).json({
         success: false,
-        error: 'Unauthorized – please log in'
+        error: "Unauthorized – please log in"
       });
     }
 
     const farmerId = req.user._id;
 
-    // Find all requests where the crop belongs to this farmer
-    const requests = await Request.find({farmerId})
+    // Get all requests for this farmer
+    const requests = await Request.find({ farmerId })
+      .populate("cropId")
+      .populate("firmId", "CompanyName city state");
+
+
+
+    // Get farmer friends and their firmsbuyer
+    const farmerWithFriends = await Farmer.findById(farmerId)
       .populate({
-        path: 'cropId firmId',
-      })
-          return res.status(200).json({
-      success: true,
-      requests:requests
+        path: "farmerfriend",
+        select: "FirstName LastName firmsbuyer",
+        populate: {
+          path: "firmsbuyer",
+          select: "CompanyName city state"
+        }
+      });
+
+
+
+    // Process each request
+    const requestsWithFriendInfo = requests.map(request => {
+
+      const requestObj = request.toObject();
+
+      const requestFirmId = requestObj.firmId._id.toString();
+
+      // Find which farmerfriends worked with this firm
+      const friendsWorkedWithFirm =
+        farmerWithFriends.farmerfriend.filter(friend =>
+          friend.firmsbuyer.some(firm =>
+            firm._id.toString() === requestFirmId
+          )
+        );
+
+      // Attach info to request
+      return {
+        ...requestObj,
+        friendsWorkedWithFirm
+      };
+
     });
-      } catch (error) {
-    console.error('Error in getRequestedCrops:', error);
+
+
+
+    return res.status(200).json({
+      success: true,
+      requests: requestsWithFriendInfo
+    });
+
+
+  } catch (error) {
+
+    console.error("Error in getRequestedCrops:", error);
+
     return res.status(500).json({
       success: false,
-      error: 'Failed to fetch requested crops'
+      error: "Failed to fetch requested crops"
     });
+
   }
 };
-
 exports.acceptCropRequest = async (req, res) => {
   try {
     if (!req.isLoggedIn || !req.user) {
@@ -236,7 +281,7 @@ exports.acceptCropRequest = async (req, res) => {
 
     const requestId = req.params.requestId;
     const farmerId = req.user._id;
-
+const farmer = await Farmer.findById(farmerId);
     const request = await Request.findById(requestId).populate('cropId');
     if (!request) {
       return res.status(404).json({ success: false, error: "Crop request not found" });
@@ -248,7 +293,6 @@ exports.acceptCropRequest = async (req, res) => {
         error: `Request is already ${request.status}`
       });
     }
-    await Crop.findByIdAndUpdate(request.cropId._id, { $inc: { totalavailable: -request.requirement } });
     
     // Update status
     request.status = "Accepted";
@@ -261,6 +305,9 @@ exports.acceptCropRequest = async (req, res) => {
       });
     }
     Crop.totalavailable=Crop.totalavailable - request.requirement;
+    Crop.buyers.push(request.firmId);
+    farmer.firmsbuyer.push(request.firmId);
+    await farmer.save();
     await Crop.save();
      // 🔔 SEND SMS TO FIRM
    /* const firm = await Firm.findById(request.firmId);
@@ -359,7 +406,6 @@ exports.acceptFirmRequest = async (req, res) => {
     const farmerId = req.user._id; // assuming auth middleware sets req.user
 
     const request = await FirmRequest.findById(requestId);
-console.log("jkdnkjsbdkjs");
     if (!request) {
       return res.status(404).json({
         success: false,

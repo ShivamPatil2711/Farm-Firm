@@ -13,7 +13,8 @@ import {
   Check,
   X,
   Plus,
-  Phone
+  Phone,
+  Users,          // ← NEW: added for friends icon
 } from 'lucide-react';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:4003';
@@ -30,12 +31,10 @@ const FarmerRequests = () => {
       try {
         setLoading(true);
         setError(null);
-
         const response = await fetch(`${BACKEND_URL}/api/requested-crops`, {
           method: 'GET',
           credentials: 'include',
         });
-
         if (!response.ok) {
           if (response.status === 401) {
             toast.warn('Please log in to view incoming requests');
@@ -44,9 +43,8 @@ const FarmerRequests = () => {
           }
           throw new Error('Failed to fetch incoming crop requests');
         }
-
         const data = await response.json();
-
+        console.log('Fetched farmer requests:', data);
         if (data?.success) {
           setRequests(Array.isArray(data.requests) ? data.requests : []);
         } else {
@@ -60,24 +58,19 @@ const FarmerRequests = () => {
         setLoading(false);
       }
     };
-
     fetchFarmerRequests();
   }, [navigate]);
 
   const handleAccept = async (requestId) => {
     if (!window.confirm('Are you sure you want to accept this request?')) return;
-
     setProcessingId(requestId);
-
     try {
       const response = await fetch(`${BACKEND_URL}/api/accept/${requestId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
-
       const result = await response.json();
-
       if (response.ok) {
         toast.success(result.message || 'Request accepted successfully');
         setRequests((prev) =>
@@ -95,7 +88,6 @@ const FarmerRequests = () => {
 
   const handleReject = async (requestId) => {
     if (!window.confirm('Are you sure you want to reject this request?')) return;
-
     setProcessingId(requestId);
     try {
       const response = await fetch(`${BACKEND_URL}/api/reject/${requestId}`, {
@@ -103,9 +95,7 @@ const FarmerRequests = () => {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
-
       const result = await response.json();
-
       if (response.ok) {
         toast.success(result.message || 'Request rejected successfully');
         setRequests((prev) =>
@@ -289,6 +279,31 @@ const FarmerRequests = () => {
                             <div className="flex items-center gap-2.5 text-gray-600 pt-1 border-t border-gray-100 pt-4">
                               <Phone className="h-4 w-4 flex-shrink-0 text-emerald-600" />
                               <span>{phone}</span>
+                            </div>
+                          )}
+
+                          {/* ── NEW: Farmer Friends Who Worked With This Firm ── */}
+                          {req.friendsWorkedWithFirm?.length > 0 && (
+                            <div className="pt-3 border-t border-gray-100">
+                              <p className="text-xs text-gray-500 font-medium mb-2 flex items-center gap-1.5">
+                                <Users className="h-3.5 w-3.5 text-emerald-600" />
+                                Farmer friends who worked with this firm
+                              </p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {req.friendsWorkedWithFirm.slice(0, 3).map((friend, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-100 truncate max-w-[160px]"
+                                  >
+                                    {friend.FirstName} {friend.LastName}
+                                  </span>
+                                ))}
+                                {req.friendsWorkedWithFirm.length > 3 && (
+                                  <span className="text-xs text-gray-500 self-center font-medium">
+                                    +{req.friendsWorkedWithFirm.length - 3}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           )}
 

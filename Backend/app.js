@@ -79,12 +79,6 @@ app.use(croprouter);
 app.use(authrouter);
 app.use(friendrouter);
 app.use(adminrouter)
-// 🔒 Protected routes
-app.use((req, res, next) => {
-  if (req.isLoggedIn) return next();
-  return res.status(401).json({ error: 'Unauthorized, please log in' });
-});
-
 app.use(farmerrouter);
 app.use(firmrouter);
 

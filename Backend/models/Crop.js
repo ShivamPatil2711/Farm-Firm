@@ -6,7 +6,8 @@ const cropSchema = mongoose.Schema({// Structure of the Table BLUEPRINT OF THE T
   totalavailable:{type: Number ,required:true},
   img:{type : String,required:true},
   grade:{type : String ,required:true},
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "Farmer" },
+  buyers: [{ type: mongoose.Schema.Types.ObjectId, ref: "Firm" }],
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "Farmer" },
 
 }
 );

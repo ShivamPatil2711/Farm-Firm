@@ -1,16 +1,21 @@
 const mongoose = require('mongoose');
 const Crop = require('../models/Crop');     // your Crop model
 const Farmer = require('../models/Farmer'); // assuming logged-in user is a Farmer
+const Firm = require('../models/Firm');
+const Request = require('../models/Request');
 const FirmRequest=require('../models/FirmRequest')
 exports.getCrops = async (req, res) => {
-  try {
-    const crops = await Crop.find().populate
-    ({ path: 'userId'});
-    console.log(crops);
-    return res.status(200).json({
+  if(!req.isLoggedIn || !req.user){
+   try {
+  let crops = await Crop.find()
+  .populate('userId');
+  crops = crops.map(crop => {
+  const { buyers, ...cropWithoutBuyers } = crop.toObject();
+  return cropWithoutBuyers;
+});
+  return res.status(200).json({
       success: true,
       crops,              // all available crops
-   
     });
 
   } catch (error) {
@@ -20,6 +25,40 @@ exports.getCrops = async (req, res) => {
       error: 'Failed to fetch crops',
     });
   }
+}else{
+         const userId = req.user._id; // from auth middleware
+        const userType=req.user.userType;
+           const crops = await Crop.find()
+  .populate('userId buyers');
+  const firmfriends = await Firm.findById(userId).select('firmfriend');
+  
+  if(userType==="farmer"){
+    return res.status(200).json({
+      success: true,
+      crops,              // all available crops
+    });
+  }else{
+    const filteredCrops = crops.map(crop => {
+      const filteredBuyers = crop.buyers.filter(buyer => firmfriends.firmfriend.includes(buyer._id));
+      return {
+...crop.toObject(),
+        buyers: filteredBuyers
+      };
+    });
+    console.log("filtered crops", filteredCrops);
+    return res.status(200).json({
+      success: true,
+      crops: filteredCrops,              // all available crops
+    });
+  }
+
+
+ 
+   
+
+
+}
+
 };
 exports.getCropDetails = async (req, res) => {
   try {
