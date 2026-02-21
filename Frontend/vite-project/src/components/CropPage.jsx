@@ -13,8 +13,6 @@ import {
 } from "./Select";
 import { Search, Filter, ArrowUpDown, Star, MapPin, Package, Plus } from "lucide-react";
 import { AuthContext } from "./AuthContext"
-import { useContext } from "react";
-import { AuthContext } from "./AuthContext";
 
 const BACKEND_URL = "http://localhost:4003";
 
@@ -29,7 +27,6 @@ const { user ,isLoggedIn } = useContext(AuthContext);
   const [sortBy, setSortBy] = useState("price-low");
   const [filterQuality, setFilterQuality] = useState("all");
 
-  const { isLoggedIn, user } = useContext(AuthContext);
 
 
   useEffect(() => {
