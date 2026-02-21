@@ -14,7 +14,6 @@ import {
 } from "./Select";
 import {
   Search,
-  Filter,
   ArrowUpDown,
   Clock,
   Package,
@@ -35,7 +34,6 @@ const AllRequests = () => {
   const [error, setError] = useState(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
   const { isLoggedIn, user } = useContext(AuthContext);
@@ -66,6 +64,7 @@ const AllRequests = () => {
         const data = await response.json();
 
         if (data.success) {
+          console.log("Fetched requests:", data.requests);
           const normalized = data.requests.map((req) => ({
             id: req._id,
             cropName: req.cropname || "Unknown Crop",
@@ -76,10 +75,10 @@ const AllRequests = () => {
             requirement: req.requirement || "Not specified",
             deadline: req.deadline
               ? new Date(req.deadline).toLocaleDateString("en-IN", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
               : "—",
             requestedAt: new Date(req.createdAt).toLocaleDateString("en-IN", {
               day: "numeric",
@@ -211,7 +210,7 @@ const AllRequests = () => {
         req.firmName.toLowerCase().includes(q) ||
         req.city.toLowerCase().includes(q) ||
         req.state.toLowerCase().includes(q)
-      ) && (filterStatus === "all" || req.status?.toLowerCase() === filterStatus.toLowerCase());
+      );
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -225,6 +224,10 @@ const AllRequests = () => {
           return 0;
       }
     });
+
+  // Split requests into Accepted and Pending
+  const acceptedRequests = filteredRequests.filter(req => req.status?.toLowerCase() === "accepted");
+  const pendingRequests = filteredRequests.filter(req => req.status?.toLowerCase() === "pending");
 
   const showAcceptButton = isLoggedIn && user?.userType === "farmer";
   const showCallButton = isLoggedIn;
@@ -269,19 +272,6 @@ const AllRequests = () => {
                 />
               </div>
 
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="h-12 w-full md:w-44 rounded-xl border-gray-200 ">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="accepted">Accepted</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="h-12 w-full md:w-52 rounded-xl border-gray-200">
                   <ArrowUpDown className="mr-2 h-4 w-4" />
@@ -322,6 +312,7 @@ const AllRequests = () => {
             <>
               <p className="text-gray-600 font-medium mb-8">
                 Showing {filteredRequests.length} request{filteredRequests.length !== 1 ? "s" : ""}
+                ({acceptedRequests.length} accepted, {pendingRequests.length} pending)
               </p>
 
               {filteredRequests.length === 0 ? (
@@ -332,85 +323,182 @@ const AllRequests = () => {
                   <p className="text-gray-500">
                     {requests.length === 0
                       ? "Check back later or post a new request if you're a buyer."
-                      : "Try adjusting your search or status filter."}
+                      : "Try adjusting your search filter."}
                   </p>
                 </div>
               ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-7">
-                  {filteredRequests.map((req) => (
-                    <Card
-                      key={req.id}
-                      className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all duration-300 bg-white group"
-                    >
-                    <div className="h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
-  <span className="text-9xl  select-none">
-    🌾
-  </span>
-</div>
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start gap-4 mb-4">
-                          <h3 className="font-semibold text-xl text-gray-900 line-clamp-2 leading-tight ">
-                            {req.cropName}
-                          </h3>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {getStatusBadge(req.status)}
-                            {showCallButton && req.firmPhone && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 rounded-full hover:bg-emerald-50"
-                                onClick={() => handleCallFirm(req.firmPhone)}
-                                title={`Call ${req.firmName}`}
-                              >
-                                <Phone className="h-4 w-4 text-emerald-600" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="space-y-3.5 text-sm mb-6">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 font-semibold shrink-0">
-                              {req.firmName?.charAt(0) || "?"}
-                            </div>
-                            <span className="font-medium text-gray-800 truncate">
-                              {req.firmName}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2.5 text-gray-600">
-                            <MapPin className="h-4 w-4 flex-shrink-0" />
-                            <span className="truncate">
-                              {req.city}, {req.state}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2.5 text-gray-600">
-                            <Package className="h-4 w-4 flex-shrink-0" />
-                            <span>Requirement: {req.requirement}</span>
-                          </div>
-
-                          <div className="flex items-center gap-2.5 text-gray-600">
-                            <Clock className="h-4 w-4 flex-shrink-0" />
-                            <span>Deadline: {req.deadline}</span>
-                          </div>
-
-                          <div className="text-xs text-gray-500 pt-1">
-                            Posted on {req.requestedAt}
-                          </div>
-                        </div>
-
-                        {showAcceptButton && req.status?.toLowerCase() === "pending" && (
-                          <Button
-                            onClick={() => handleAcceptRequest(req.id)}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                <div className="space-y-12">
+                  {/* Accepted Requests Section */}
+                  {acceptedRequests.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-3 mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          Accepted Requests
+                        </h2>
+                        <Badge className="bg-emerald-100 text-emerald-700 px-3 py-1">
+                          {acceptedRequests.length}
+                        </Badge>
+                      </div>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-7">
+                        {acceptedRequests.map((req) => (
+                          <Card
+                            key={req.id}
+                            className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all duration-300 bg-white group"
                           >
-                            Accept This Request
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
+                            <div className="h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+                              <span className="text-9xl  select-none">
+                                🌾
+                              </span>
+                            </div>
+                            <CardContent className="p-6">
+                              <div className="flex justify-between items-start gap-4 mb-4">
+                                <h3 className="font-semibold text-xl text-gray-900 line-clamp-2 leading-tight ">
+                                  {req.cropName}
+                                </h3>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {getStatusBadge(req.status)}
+                                  {showCallButton && req.firmPhone && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 rounded-full hover:bg-emerald-50"
+                                      onClick={() => handleCallFirm(req.firmPhone)}
+                                      title={`Call ${req.firmName}`}
+                                    >
+                                      <Phone className="h-4 w-4 text-emerald-600" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-3.5 text-sm mb-6">
+                                <div className="flex items-center gap-3">
+                                  
+                                  <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 font-semibold shrink-0">
+                                    {req.firmName?.charAt(0) || "?"}
+                                  </div>
+                                  <span className="font-medium text-gray-800 truncate">
+                                    {req.firmName}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2.5 text-gray-600">
+                                  <MapPin className="h-4 w-4 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {req.city}, {req.state}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2.5 text-gray-600">
+                                  <Package className="h-4 w-4 flex-shrink-0" />
+                                  <span>Requirement: {req.requirement}</span>
+                                </div>
+
+                                <div className="flex items-center gap-2.5 text-gray-600">
+                                  <Clock className="h-4 w-4 flex-shrink-0" />
+                                  <span>Deadline: {req.deadline}</span>
+                                </div>
+
+                                <div className="text-xs text-gray-500 pt-1">
+                                  Posted on {req.requestedAt}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pending Requests Section */}
+                  {pendingRequests.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-3 mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                          All Pending Requests
+                        </h2>
+                        <Badge className="bg-amber-100 text-amber-700 px-3 py-1">
+                          {pendingRequests.length}
+                        </Badge>
+                      </div>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-7">
+                        {pendingRequests.map((req) => (
+                          <Card
+                            key={req.id}
+                            className="overflow-hidden rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all duration-300 bg-white group"
+                          >
+                            <div className="h-40 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
+                              <span className="text-9xl  select-none">
+                                🌾
+                              </span>
+                            </div>
+                            <CardContent className="p-6">
+                              <div className="flex justify-between items-start gap-4 mb-4">
+                                <h3 className="font-semibold text-xl text-gray-900 line-clamp-2 leading-tight ">
+                                  {req.cropName}
+                                </h3>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {getStatusBadge(req.status)}
+                                  {showCallButton && req.firmPhone && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 rounded-full hover:bg-emerald-50"
+                                      onClick={() => handleCallFirm(req.firmPhone)}
+                                      title={`Call ${req.firmName}`}
+                                    >
+                                      <Phone className="h-4 w-4 text-emerald-600" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="space-y-3.5 text-sm mb-6">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 font-semibold shrink-0">
+                                    {req.firmName?.charAt(0) || "?"}
+                                  </div>
+                                  <span className="font-medium text-gray-800 truncate">
+                                    {req.firmName}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2.5 text-gray-600">
+                                  <MapPin className="h-4 w-4 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {req.city}, {req.state}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2.5 text-gray-600">
+                                  <Package className="h-4 w-4 flex-shrink-0" />
+                                  <span>Requirement: {req.requirement}</span>
+                                </div>
+
+                                <div className="flex items-center gap-2.5 text-gray-600">
+                                  <Clock className="h-4 w-4 flex-shrink-0" />
+                                  <span>Deadline: {req.deadline}</span>
+                                </div>
+
+                                <div className="text-xs text-gray-500 pt-1">
+                                  Posted on {req.requestedAt}
+                                </div>
+                              </div>
+
+                              {showAcceptButton && (
+                                <Button
+                                  onClick={() => handleAcceptRequest(req.id)}
+                                  className="w-full bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                                >
+                                  Accept This Request
+                                </Button>
+                              )}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
