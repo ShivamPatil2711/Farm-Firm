@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from "./Select";
 import { Search, Filter, ArrowUpDown, Star, MapPin, Package, Plus } from "lucide-react";
+import { AuthContext } from "./AuthContext"
+import { useContext } from "react";
 import { AuthContext } from "./AuthContext";
 
 const BACKEND_URL = "http://localhost:4003";
@@ -26,6 +28,9 @@ const { user ,isLoggedIn } = useContext(AuthContext);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("price-low");
   const [filterQuality, setFilterQuality] = useState("all");
+
+  const { isLoggedIn, user } = useContext(AuthContext);
+
 
   useEffect(() => {
     const fetchCrops = async () => {
@@ -76,9 +81,9 @@ const { user ,isLoggedIn } = useContext(AuthContext);
 
   const getQualityStyles = (quality) => {
     const styles = {
-    A: "bg-emerald-100 text-emerald-800 border-emerald-200",   // Excellent / Distinction
-B: "bg-blue-100 text-blue-800 border-blue-200",           // Good / Above average
-C: "bg-amber-100 text-amber-800 border-amber-200",         // Average / Pass
+      A: "bg-emerald-100 text-emerald-800 border-emerald-200",   // Excellent / Distinction
+      B: "bg-blue-100 text-blue-800 border-blue-200",           // Good / Above average
+      C: "bg-amber-100 text-amber-800 border-amber-200",         // Average / Pass
     };
     return styles[quality] || "bg-gray-50 text-gray-600 border-gray-200";
   };
@@ -94,11 +99,11 @@ C: "bg-amber-100 text-amber-800 border-amber-200",         // Average / Pass
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case "price-low":  return a.price - b.price;
+        case "price-low": return a.price - b.price;
         case "price-high": return b.price - a.price;
-        case "quantity":   return b.available - a.available;
-        case "rating":     return b.farmerRating - a.farmerRating;
-        default:           return 0;
+        case "quantity": return b.available - a.available;
+        case "rating": return b.farmerRating - a.farmerRating;
+        default: return 0;
       }
     });
 
@@ -142,6 +147,16 @@ C: "bg-amber-100 text-amber-800 border-amber-200",         // Average / Pass
               </p>
             </div>
 
+            {isLoggedIn && (user?.userType === "farmer") && (
+              <Button
+                onClick={() => navigate("/add-crop")}
+                size="lg"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md hover:shadow-lg transition-all"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                List Your Crop
+              </Button>
+            )}
         {isLoggedIn && user.userType==='farmer' &&<>
          <Button
               onClick={() => navigate("/add-crop")}

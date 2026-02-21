@@ -248,6 +248,8 @@ exports.acceptCropRequest = async (req, res) => {
         error: `Request is already ${request.status}`
       });
     }
+    await Crop.findByIdAndUpdate(request.cropId._id, { $inc: { totalavailable: -request.requirement } });
+    
     // Update status
     request.status = "Accepted";
     await request.save();

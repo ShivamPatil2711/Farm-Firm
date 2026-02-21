@@ -29,6 +29,12 @@ exports.PostRequestCrop = async (req, res) => {
         .json({ error: "Deadline date must be present date or after" });
     }
 
+    if(requirement > crop.totalavailable){
+      return res
+        .status(400)
+        .json({ error: "Requirement exceeds available crop quantity" });
+    }
+
     // Create new request
     const newRequest = new Request({
       deadline,
