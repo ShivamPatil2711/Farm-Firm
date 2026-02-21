@@ -19,6 +19,11 @@ required:true
     ref: 'Firm',  // or 'User' — depending on your auth model
     required: true
   },
+  farmerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Farmer',  // or 'User' — depending on your auth model
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

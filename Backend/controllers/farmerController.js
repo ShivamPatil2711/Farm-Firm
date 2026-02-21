@@ -420,7 +420,7 @@ exports.acceptFirmRequest = async (req, res) => {
         error: `Request is already ${request.status}`
       });
     }
-
+    request.farmerId = farmerId; // assign farmer to request
      // Update request status
     request.status = 'Accepted';
     await request.save();

@@ -3,61 +3,61 @@ const Crop = require('../models/Crop');     // your Crop model
 const Farmer = require('../models/Farmer'); // assuming logged-in user is a Farmer
 const Firm = require('../models/Firm');
 const Request = require('../models/Request');
-const FirmRequest=require('../models/FirmRequest')
+const FirmRequest = require('../models/FirmRequest')
 exports.getCrops = async (req, res) => {
-  if(!req.isLoggedIn || !req.user){
-   try {
-  let crops = await Crop.find()
-  .populate('userId');
-  crops = crops.map(crop => {
-  const { buyers, ...cropWithoutBuyers } = crop.toObject();
-  return cropWithoutBuyers;
-});
-  return res.status(200).json({
-      success: true,
-      crops,              // all available crops
-    });
+  if (!req.isLoggedIn || !req.user) {
+    try {
+      let crops = await Crop.find()
+        .populate('userId');
+      crops = crops.map(crop => {
+        const { buyers, ...cropWithoutBuyers } = crop.toObject();
+        return cropWithoutBuyers;
+      });
+      return res.status(200).json({
+        success: true,
+        crops,              // all available crops
+      });
 
-  } catch (error) {
-    console.error('Error in getCrops:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to fetch crops',
-    });
+    } catch (error) {
+      console.error('Error in getCrops:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch crops',
+      });
+    }
+  } else {
+    const userId = req.user._id; // from auth middleware
+    const userType = req.user.userType;
+    const crops = await Crop.find()
+      .populate('userId buyers');
+    const firmfriends = await Firm.findById(userId).select('firmfriend');
+
+    if (userType === "farmer") {
+      return res.status(200).json({
+        success: true,
+        crops,              // all available crops
+      });
+    } else {
+      const filteredCrops = crops.map(crop => {
+        const filteredBuyers = crop.buyers.filter(buyer => firmfriends.firmfriend.includes(buyer._id));
+        return {
+          ...crop.toObject(),
+          buyers: filteredBuyers
+        };
+      });
+      console.log("filtered crops", filteredCrops);
+      return res.status(200).json({
+        success: true,
+        crops: filteredCrops,              // all available crops
+      });
+    }
+
+
+
+
+
+
   }
-}else{
-         const userId = req.user._id; // from auth middleware
-        const userType=req.user.userType;
-           const crops = await Crop.find()
-  .populate('userId buyers');
-  const firmfriends = await Firm.findById(userId).select('firmfriend');
-  
-  if(userType==="farmer"){
-    return res.status(200).json({
-      success: true,
-      crops,              // all available crops
-    });
-  }else{
-    const filteredCrops = crops.map(crop => {
-      const filteredBuyers = crop.buyers.filter(buyer => firmfriends.firmfriend.includes(buyer._id));
-      return {
-...crop.toObject(),
-        buyers: filteredBuyers
-      };
-    });
-    console.log("filtered crops", filteredCrops);
-    return res.status(200).json({
-      success: true,
-      crops: filteredCrops,              // all available crops
-    });
-  }
-
-
- 
-   
-
-
-}
 
 };
 exports.getCropDetails = async (req, res) => {
@@ -79,7 +79,7 @@ exports.getCropDetails = async (req, res) => {
 
     // Fetch the farmer (host/creator) who listed the crop
     const farmer = await Farmer.findById(cropDetail.userId);
-      // Final response
+    // Final response
     return res.status(200).json({
       success: true,
       crop: cropDetail,
@@ -129,16 +129,50 @@ exports.updateCrop = async (req, res) => {
 };
 exports.getAllRequests = async (req, res) => {
   try {
+    if (!req.isLoggedIn || !req.user) {
+      const requests = await FirmRequest.find({ status: "Pending" }).populate({
+        path: "firmId"
+      });
+      return res.status(200).json({
+        success: true,
+        requests: requests
+      });
+    }
+    const userId = req.user._id;
+    const userType = req.user.userType;
+
+    if (userType == "farmer") {
+      const requests = await FirmRequest.find({
+        $or: [
+          { status: "Pending" },
+          { farmerId: userId }
+        ]
+      }).populate({
+        path: "firmId"
+      });
+      return res.status(200).json({
+        success: true,
+        requests: requests
+      });
+    } else {
       // 3. Fetch all requests made by this user
-    const requests = await FirmRequest.find({status:"Pending"})
-      .populate({
-        path: 'firmId'
-      })
-    // 4. Format response
-    return res.status(200).json({
-      success: true,
-       requests:requests
-    });
+      const requests = await FirmRequest.find({
+        $or: [
+          { status: "Pending" },
+          {
+            status: "Accepted",
+            firmId: userId
+          }
+        ]
+      }).populate({
+        path: "firmId"
+      });
+      // 4. Format response
+      return res.status(200).json({
+        success: true,
+        requests: requests
+      });
+    }
 
   } catch (error) {
     console.error('Error in getAllRequests:', error);
