@@ -13,7 +13,7 @@ const farmerrouter=require('./routes/farmerRouter');
 const firmrouter=require('./routes/firmRouter');
 const croprouter=require('./routes/cropRouter');
 const adminrouter = require('./routes/adminrouter');
-
+const friendrouter = require('./routes/friendRouter');
 
 require('dotenv').config();
 
@@ -78,6 +78,7 @@ app.use((req, res, next) => {
 // 🌍 Public routes
 app.use(croprouter);
 app.use(authrouter);
+app.use(friendrouter);
 app.use(adminrouter)
 // 🔒 Protected routes
 app.use((req, res, next) => {

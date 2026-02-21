@@ -1,7 +1,8 @@
+// src/pages/FarmerDashboard.jsx
 import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "./AuthContext";
-import { Card, CardContent } from "./Card";
+import { Card, CardContent, CardHeader, CardTitle } from "./Card";
 import { Badge } from "./Badge";
 import { Button } from "./Button";
 import { Input } from "./Input";
@@ -19,6 +20,11 @@ import {
   Plus,
   Loader2,
   X,
+  UserPlus,
+  
+  CheckCircle2,     // for Accept
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
@@ -44,7 +50,11 @@ const FarmerDashboard = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Market prices data
+  // ── New state for received friend requests ──
+  const [friendRequests, setFriendRequests] = useState([]);
+  const [friendRequestsLoading, setFriendRequestsLoading] = useState(false);
+
+  // Market prices data (unchanged)
   const marketPrices = [
     { crop: "Wheat", location: "Mumbai APMC", price: 28, unit: "kg", trend: "up", change: 7.7 },
     { crop: "Rice (Basmati)", location: "Delhi Mandi", price: 85, unit: "kg", trend: "down", change: -3.4 },
@@ -52,58 +62,80 @@ const FarmerDashboard = () => {
     { crop: "Onions", location: "Nashik Mandi", price: 22, unit: "kg", trend: "up", change: 22.2 },
   ];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+ useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
 
-        // Fetch profile
-        const profileRes = await fetch(`${BACKEND_URL}/api/farmer/profile`, {
-          method: "GET",
-          credentials: "include",
-        });
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          console.log("Farmer Profile Data:", profileData);
-          setProfileData(profileData.farmerProfile);
-        }
-
-        // Fetch listed crops
-        const cropsRes = await fetch(`${BACKEND_URL}/api/listed-crops`, {
-          method: "GET",
-          credentials: "include",
-        });
-        if (cropsRes.ok) {
-          const cropsData = await cropsRes.json();
-          console.log("Listed Crops Data:", cropsData);
-          if (cropsData.success) {
-            setListedCrops(cropsData.listedCrops || []);
-          }
-        }
-
-        // Fetch requests
-        const requestsRes = await fetch(`${BACKEND_URL}/api/requested-crops`, {
-          method: "GET",
-          credentials: "include",
-        });
-        if (requestsRes.ok) {
-          const requestsData = await requestsRes.json();
-          console.log("Farmer Requests Data:", requestsData);
-          if (requestsData.success) {
-            setRequests(requestsData.requests || []);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
+      // Fetch profile
+      const profileRes = await fetch(`${BACKEND_URL}/api/farmer/profile`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setProfileData(profileData.farmerProfile);
       }
-    };
 
+      // Fetch listed crops
+      const cropsRes = await fetch(`${BACKEND_URL}/api/listed-crops`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (cropsRes.ok) {
+        const cropsData = await cropsRes.json();
+        if (cropsData.success) {
+          setListedCrops(cropsData.listedCrops || []);
+        }
+      }
+
+      // Fetch crop requests
+      const requestsRes = await fetch(`${BACKEND_URL}/api/requested-crops`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (requestsRes.ok) {
+        const requestsData = await requestsRes.json();
+        if (requestsData.success) {
+          setRequests(requestsData.requests || []);
+        }
+      }
+
+      // ── Updated: Fetch pending received friend requests ──
+      setFriendRequestsLoading(true);
+      const friendReqRes = await fetch(
+        `${BACKEND_URL}/api/friend-requests/${user?._id}`,  // ← corrected endpoint
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (friendReqRes.ok) {
+        const data = await friendReqRes.json();
+        console.log("Fetched friend requests:", data);
+        if (data.success) {
+          setFriendRequests(data.requests || []);
+        } else {
+          console.warn("Friend requests API returned success: false", data);
+        }
+      } else {
+        console.warn("Failed to fetch friend requests", friendReqRes.status);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+      setFriendRequestsLoading(false);
+    }
+  };
+
+  if (user?._id) {
     fetchData();
-  }, []);
+  }
+}, [user?._id]);
 
-  // Calculate stats
+  // Calculate stats (unchanged)
   const activeListings = listedCrops.filter((crop) => crop.status === "Active").length;
   const pendingOrders = requests.filter((req) => req.status === "Pending").length;
   const totalSales = requests.filter((req) => req.status === "Accepted").length;
@@ -111,6 +143,7 @@ const FarmerDashboard = () => {
     .filter((req) => req.status === "Accepted")
     .reduce((sum, req) => sum + (req.requirement * req.cropId?.price || 0), 0);
 
+  // ── Edit crop handlers (unchanged) ──
   const handleEditClick = (crop) => {
     setSelectedCrop(crop);
     setEditFormData({
@@ -147,6 +180,58 @@ const FarmerDashboard = () => {
     }));
   };
 
+  const handleAcceptRequest = async (requestId) => {
+  if (!confirm("Accept this friend request?")) return;
+
+  try {
+    const res = await fetch(
+      `${BACKEND_URL}/api/friend-requests/accept/${requestId}`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || "Failed to accept request");
+    }
+
+    setFriendRequests(prev =>
+      prev.filter(req => req._id !== requestId)
+    );
+
+  } catch (err) {
+    console.error("Accept friend request failed:", err);
+    alert(err.message || "Could not accept friend request");
+  }
+};
+
+  const handleRejectRequest = async (requestId) => {
+    if (!confirm("Reject this friend request? This action cannot be undone.")) return;
+
+    try {
+          const res = await fetch(`${BACKEND_URL}/api/friend-requests/reject/${requestId}`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to reject request");
+      }
+
+setFriendRequests((prev) =>
+  prev.filter((req) => req._id.toString() !== requestId.toString())
+);
+      alert("Friend request rejected.");
+    } catch (err) {
+      console.error("Reject friend request failed:", err);
+      alert(err.message || "Could not reject friend request");
+    } 
+  };
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -163,7 +248,6 @@ const FarmerDashboard = () => {
 
       if (response.ok) {
         const updatedCrop = await response.json();
-        // Update the local state
         setListedCrops((prev) =>
           prev.map((crop) =>
             crop._id === selectedCrop._id ? { ...updatedCrop.crop, ...editFormData } : crop
@@ -239,8 +323,8 @@ const FarmerDashboard = () => {
           </Button>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-          {/* Stats Cards */}
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -331,27 +415,13 @@ const FarmerDashboard = () => {
                     <table className="w-full">
                       <thead className="bg-muted/50 border-b border-border">
                         <tr>
-                          <th className="text-left p-4 text-sm font-semibold text-foreground">
-                            Crop
-                          </th>
-                          <th className="text-left p-4 text-sm font-semibold text-foreground">
-                            Quantity
-                          </th>
-                          <th className="text-left p-4 text-sm font-semibold text-foreground">
-                            Price
-                          </th>
-                          <th className="text-left p-4 text-sm font-semibold text-foreground">
-                            Quality
-                          </th>
-                          <th className="text-left p-4 text-sm font-semibold text-foreground">
-                            Status
-                          </th>
-                          <th className="text-left p-4 text-sm font-semibold text-foreground">
-                            Listed
-                          </th>
-                          <th className="text-left p-4 text-sm font-semibold text-foreground">
-                            Actions
-                          </th>
+                          <th className="text-left p-4 text-sm font-semibold text-foreground">Crop</th>
+                          <th className="text-left p-4 text-sm font-semibold text-foreground">Quantity</th>
+                          <th className="text-left p-4 text-sm font-semibold text-foreground">Price</th>
+                          <th className="text-left p-4 text-sm font-semibold text-foreground">Quality</th>
+                          <th className="text-left p-4 text-sm font-semibold text-foreground">Status</th>
+                          <th className="text-left p-4 text-sm font-semibold text-foreground">Listed</th>
+                          <th className="text-left p-4 text-sm font-semibold text-foreground">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -361,9 +431,7 @@ const FarmerDashboard = () => {
                             className="border-b border-border hover:bg-muted/30 transition-colors"
                           >
                             <td className="p-4">
-                              <span className="font-medium text-foreground">
-                                {crop.cropname}
-                              </span>
+                              <span className="font-medium text-foreground">{crop.cropname}</span>
                             </td>
                             <td className="p-4 text-foreground">
                               {crop.totalavailable} {crop.unit}
@@ -417,11 +485,101 @@ const FarmerDashboard = () => {
             </Card>
           </div>
 
-  
+          {/* ── NEW: Pending Friend Requests Section ── */}
+          <div className="lg:col-span-1">
+            <Card className="h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <UserPlus className="h-5 w-5 text-amber-600" />
+                  Pending Friend Requests
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {friendRequestsLoading ? (
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                    <p className="text-sm text-muted-foreground">Loading requests...</p>
+                  </div>
+                ) : friendRequests.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <UserPlus className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                    <p>No pending friend requests</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {friendRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-muted/30 rounded-lg border border-border"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <UserPlus className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">
+                              {req.senderType === "farmer"
+                                ? `${req.sender?.FirstName || ""} ${req.sender?.LastName || ""}`
+                                : req.sender?.CompanyName || "Unknown Sender"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {req.sender?.city && req.sender?.state
+                                ? `${req.sender.city}, ${req.sender.state}`
+                                : "Location not available"}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {new Date(req.timestamp).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => handleAcceptRequest(req._id)}
+                            disabled={req.isProcessing}
+                          >
+                            {req.isProcessing ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4 mr-1" />
+                            )}
+                            Accept
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleRejectRequest(req._id)}
+                            disabled={req.isProcessing}
+                          >
+                            {req.isProcessing ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                            ) : (
+                              <XCircle className="h-4 w-4 mr-1" />
+                            )}
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
-      {/* Edit Modal */}
+      {/* Edit Modal (unchanged) */}
       {isEditModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200"
@@ -431,7 +589,6 @@ const FarmerDashboard = () => {
             className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-border animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="flex items-center justify-between px-8 py-6 bg-gradient-to-r from-farmer/10 to-transparent border-b border-border">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-farmer/10 rounded-lg">
@@ -447,10 +604,8 @@ const FarmerDashboard = () => {
               </button>
             </div>
 
-            {/* Modal Body */}
             <form onSubmit={handleEditSubmit} className="overflow-y-auto max-h-[calc(90vh-180px)] bg-white ">
               <div className="px-8 py-6 space-y-6">
-                {/* Crop Name */}
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-2">
                     Crop Name <span className="text-destructive">*</span>
@@ -465,9 +620,7 @@ const FarmerDashboard = () => {
                   />
                 </div>
 
-                {/* Grid for smaller fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Total Available */}
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">
                       Total Available <span className="text-destructive">*</span>
@@ -484,7 +637,6 @@ const FarmerDashboard = () => {
                     />
                   </div>
 
-                  {/* Min Quantity */}
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">
                       Minimum Order Quantity <span className="text-destructive">*</span>
@@ -503,7 +655,6 @@ const FarmerDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Price */}
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">
                       Price per Unit (₹) <span className="text-destructive">*</span>
@@ -521,7 +672,6 @@ const FarmerDashboard = () => {
                     />
                   </div>
 
-                  {/* Unit */}
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">
                       Unit <span className="text-destructive">*</span>
@@ -546,7 +696,6 @@ const FarmerDashboard = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Grade */}
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">
                       Quality Grade <span className="text-destructive">*</span>
@@ -568,7 +717,6 @@ const FarmerDashboard = () => {
                     </Select>
                   </div>
 
-                  {/* Status */}
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">
                       Listing Status <span className="text-destructive">*</span>
@@ -592,7 +740,6 @@ const FarmerDashboard = () => {
                 </div>
               </div>
 
-              {/* Modal Footer */}
               <div className="flex items-center justify-end gap-4 px-8 py-6 bg-slate-50 border-t border-border">
                 <Button
                   type="button"

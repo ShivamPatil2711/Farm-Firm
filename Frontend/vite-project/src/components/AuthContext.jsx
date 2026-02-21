@@ -13,7 +13,7 @@ const backendApiUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:
         const response = await fetch(`${backendApiUrl}/api/check-auth`, {
           method: 'GET',
           credentials: 'include',
-        });
+        });  
           
         if (response.ok) {
           const data = await response.json();
