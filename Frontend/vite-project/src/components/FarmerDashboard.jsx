@@ -21,10 +21,15 @@ import {
   Loader2,
   X,
   UserPlus,
-  
+
   CheckCircle2,     // for Accept
   XCircle,
   AlertCircle,
+  Users,
+  Building2,
+  MapPin,
+  Mail,
+  Phone,
 } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
@@ -54,86 +59,91 @@ const FarmerDashboard = () => {
   const [friendRequests, setFriendRequests] = useState([]);
   const [friendRequestsLoading, setFriendRequestsLoading] = useState(false);
 
-  // Market prices data (unchanged)
-  const marketPrices = [
-    { crop: "Wheat", location: "Mumbai APMC", price: 28, unit: "kg", trend: "up", change: 7.7 },
-    { crop: "Rice (Basmati)", location: "Delhi Mandi", price: 85, unit: "kg", trend: "down", change: -3.4 },
-    { crop: "Tomatoes", location: "Pune APMC", price: 35, unit: "kg", trend: "neutral", change: 0.0 },
-    { crop: "Onions", location: "Nashik Mandi", price: 22, unit: "kg", trend: "up", change: 22.2 },
-  ];
+  // ── State for friends lists ──
+  const [farmerFriends, setFarmerFriends] = useState([]);
+  const [firmFriends, setFirmFriends] = useState([]);
 
- useEffect(() => {
-  const fetchData = async () => {
-    try {
-      setLoading(true);
 
-      // Fetch profile
-      const profileRes = await fetch(`${BACKEND_URL}/api/farmer/profile`, {
-        method: "GET",
-        credentials: "include",
-      });
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-        setProfileData(profileData.farmerProfile);
-      }
 
-      // Fetch listed crops
-      const cropsRes = await fetch(`${BACKEND_URL}/api/listed-crops`, {
-        method: "GET",
-        credentials: "include",
-      });
-      if (cropsRes.ok) {
-        const cropsData = await cropsRes.json();
-        if (cropsData.success) {
-          setListedCrops(cropsData.listedCrops || []);
-        }
-      }
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
 
-      // Fetch crop requests
-      const requestsRes = await fetch(`${BACKEND_URL}/api/requested-crops`, {
-        method: "GET",
-        credentials: "include",
-      });
-      if (requestsRes.ok) {
-        const requestsData = await requestsRes.json();
-        if (requestsData.success) {
-          setRequests(requestsData.requests || []);
-        }
-      }
-
-      // ── Updated: Fetch pending received friend requests ──
-      setFriendRequestsLoading(true);
-      const friendReqRes = await fetch(
-        `${BACKEND_URL}/api/friend-requests/${user?._id}`,  // ← corrected endpoint
-        {
+        // Fetch profile
+        const profileRes = await fetch(`${BACKEND_URL}/api/farmer/profile`, {
           method: "GET",
           credentials: "include",
-        }
-      );
+        });
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          console.log("Profile response:", profileData);
+          setProfileData(profileData.farmerProfile);
 
-      if (friendReqRes.ok) {
-        const data = await friendReqRes.json();
-        console.log("Fetched friend requests:", data);
-        if (data.success) {
-          setFriendRequests(data.requests || []);
+          // Extract friends data from profile
+          if (profileData.farmerProfile) {
+            setFarmerFriends(profileData.farmerProfile.farmerfriend || []);
+            setFirmFriends(profileData.farmerProfile.firmfriend || []);
+          }
+        }
+
+        // Fetch listed crops
+        const cropsRes = await fetch(`${BACKEND_URL}/api/listed-crops`, {
+          method: "GET",
+          credentials: "include",
+        });
+        if (cropsRes.ok) {
+          const cropsData = await cropsRes.json();
+          if (cropsData.success) {
+            setListedCrops(cropsData.listedCrops || []);
+          }
+        }
+
+        // Fetch crop requests
+        const requestsRes = await fetch(`${BACKEND_URL}/api/requested-crops`, {
+          method: "GET",
+          credentials: "include",
+        });
+        if (requestsRes.ok) {
+          const requestsData = await requestsRes.json();
+          if (requestsData.success) {
+            setRequests(requestsData.requests || []);
+          }
+        }
+
+        // ── Updated: Fetch pending received friend requests ──
+        setFriendRequestsLoading(true);
+        const friendReqRes = await fetch(
+          `${BACKEND_URL}/api/friend-requests/${user?._id}`,  // ← corrected endpoint
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
+        if (friendReqRes.ok) {
+          const data = await friendReqRes.json();
+          console.log("Fetched friend requests:", data);
+          if (data.success) {
+            setFriendRequests(data.requests || []);
+          } else {
+            console.warn("Friend requests API returned success: false", data);
+          }
         } else {
-          console.warn("Friend requests API returned success: false", data);
+          console.warn("Failed to fetch friend requests", friendReqRes.status);
         }
-      } else {
-        console.warn("Failed to fetch friend requests", friendReqRes.status);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+        setFriendRequestsLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setLoading(false);
-      setFriendRequestsLoading(false);
-    }
-  };
+    };
 
-  if (user?._id) {
-    fetchData();
-  }
-}, [user?._id]);
+    if (user?._id) {
+      fetchData();
+    }
+  }, [user?._id]);
 
   // Calculate stats (unchanged)
   const activeListings = listedCrops.filter((crop) => crop.status === "Active").length;
@@ -181,38 +191,38 @@ const FarmerDashboard = () => {
   };
 
   const handleAcceptRequest = async (requestId) => {
-  if (!confirm("Accept this friend request?")) return;
+    if (!confirm("Accept this friend request?")) return;
 
-  try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/friend-requests/accept/${requestId}`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/friend-requests/accept/${requestId}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to accept request");
       }
-    );
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || "Failed to accept request");
+      setFriendRequests(prev =>
+        prev.filter(req => req._id !== requestId)
+      );
+
+    } catch (err) {
+      console.error("Accept friend request failed:", err);
+      alert(err.message || "Could not accept friend request");
     }
-
-    setFriendRequests(prev =>
-      prev.filter(req => req._id !== requestId)
-    );
-
-  } catch (err) {
-    console.error("Accept friend request failed:", err);
-    alert(err.message || "Could not accept friend request");
-  }
-};
+  };
 
   const handleRejectRequest = async (requestId) => {
     if (!confirm("Reject this friend request? This action cannot be undone.")) return;
 
     try {
-          const res = await fetch(`${BACKEND_URL}/api/friend-requests/reject/${requestId}`, {
+      const res = await fetch(`${BACKEND_URL}/api/friend-requests/reject/${requestId}`, {
         method: "POST",
         credentials: "include",
       });
@@ -222,14 +232,14 @@ const FarmerDashboard = () => {
         throw new Error(err.message || "Failed to reject request");
       }
 
-setFriendRequests((prev) =>
-  prev.filter((req) => req._id.toString() !== requestId.toString())
-);
+      setFriendRequests((prev) =>
+        prev.filter((req) => req._id.toString() !== requestId.toString())
+      );
       alert("Friend request rejected.");
     } catch (err) {
       console.error("Reject friend request failed:", err);
       alert(err.message || "Could not reject friend request");
-    } 
+    }
   };
 
   const handleEditSubmit = async (e) => {
@@ -569,6 +579,156 @@ setFriendRequests((prev) =>
                             Reject
                           </Button>
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Friends Section - Farmer Friends and Firm Friends */}
+        <div className="mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Farmer Friends */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Users className="h-5 w-5 text-farmer" />
+                  Farmer Friends
+                  <Badge className="ml-auto bg-farmer/10 text-farmer border-farmer/30">
+                    {farmerFriends.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {farmerFriends.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm">No farmer friends yet</p>
+                    <p className="text-xs mt-1">Connect with other farmers to expand your network</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {farmerFriends.map((friend, index) => (
+                      <div
+                        key={friend._id || index}
+                        className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border hover:shadow-sm transition-shadow"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-12 h-12 rounded-full bg-farmer/10 flex items-center justify-center flex-shrink-0">
+                            <Users className="h-6 w-6 text-farmer" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-foreground truncate">
+                              {friend.FirstName && friend.LastName
+                                ? `${friend.FirstName} ${friend.LastName}`
+                                : friend.name || "Farmer"}
+                            </p>
+                            {(friend.city || friend.state) && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                <MapPin className="h-3 w-3" />
+                                <span className="truncate">
+                                  {friend.city && friend.state
+                                    ? `${friend.city}, ${friend.state}`
+                                    : friend.city || friend.state || "Location not available"}
+                                </span>
+                              </div>
+                            )}
+                            {friend.phoneNumber && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                <Phone className="h-3 w-3" />
+                                <span>{friend.phoneNumber}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/profile/${friend._id}?userType=farmer`)}
+                          className="flex-shrink-0"
+                        >
+                          View Profile
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Firm Friends */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                  Firm Friends
+                  <Badge className="ml-auto bg-blue-500/10 text-blue-600 border-blue-500/30">
+                    {firmFriends.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {firmFriends.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <Building2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm">No firm connections yet</p>
+                    <p className="text-xs mt-1">Connect with firms to expand your business opportunities</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {firmFriends.map((firm, index) => (
+                      <div
+                        key={firm._id || index}
+                        className="flex items-center justify-between p-4 bg-blue-500/5 rounded-lg border border-blue-500/20 hover:shadow-sm transition-shadow"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                            <Building2 className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-foreground truncate">
+                              {firm.CompanyName || "Company"}
+                            </p>
+                            {firm.ContactPerson && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                Contact: {firm.ContactPerson}
+                              </p>
+                            )}
+                            {(firm.city || firm.state) && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                <MapPin className="h-3 w-3" />
+                                <span className="truncate">
+                                  {firm.city && firm.state
+                                    ? `${firm.city}, ${firm.state}`
+                                    : firm.city || firm.state || "Location not available"}
+                                </span>
+                              </div>
+                            )}
+                            {firm.email && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 truncate">
+                                <Mail className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{firm.email}</span>
+                              </div>
+                            )}
+                            {firm.phoneNumber && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                <Phone className="h-3 w-3" />
+                                <span>{firm.phoneNumber}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/profile/${firm._id}?userType=firm`)}
+                          className="flex-shrink-0"
+                        >
+                          View Profile
+                        </Button>
                       </div>
                     ))}
                   </div>

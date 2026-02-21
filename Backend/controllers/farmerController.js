@@ -399,7 +399,7 @@ exports.getProfile = async (req, res) => {
     const farmerId = req.user._id;
 
     // 2. Fetch farmer profile
-    const farmer = await Farmer.findById(farmerId).select('-password').populate('listedCrops');
+    const farmer = await Farmer.findById(farmerId).select('-password').populate('listedCrops farmerfriend firmfriend');
     if (!farmer) {
       return res.status(404).json({ error: 'Farmer not found' });
     }

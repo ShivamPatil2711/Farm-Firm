@@ -28,6 +28,7 @@ import {
     CheckCircle2,
     XCircle,
     AlertCircle,
+    Users,
 } from "lucide-react";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
@@ -41,12 +42,16 @@ const FirmProfilePage = () => {
     const [farmers, setFarmers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [activeTab, setActiveTab] = useState("dashboard");
+
     const [searchQuery, setSearchQuery] = useState("");
 
     // ── New state for pending friend requests ──
     const [friendRequests, setFriendRequests] = useState([]);
     const [friendRequestsLoading, setFriendRequestsLoading] = useState(true);
+
+    // ── State for friends lists ──
+    const [farmerFriends, setFarmerFriends] = useState([]);
+    const [firmFriends, setFirmFriends] = useState([]);
 
     useEffect(() => {
         if (!isLoggedIn) {
@@ -72,6 +77,12 @@ const FirmProfilePage = () => {
                 const data = await response.json();
                 console.log("Fetched firm profile data:", data);
                 setProfileData(data.firmProfile);
+
+                // Extract friends data from profile
+                if (data.firmProfile) {
+                    setFarmerFriends(data.firmProfile.farmerfriend || []);
+                    setFirmFriends(data.firmProfile.firmfriend || []);
+                }
 
                 // Fetch firm's requests
                 const requestsResponse = await fetch(`${BACKEND_URL}/api/myrequests`, {
@@ -102,7 +113,7 @@ const FirmProfilePage = () => {
                 }
 
                 // ── NEW: Fetch pending friend requests received by this firm ──
-                const friendReqResponse = await fetch(`${BACKEND_URL}/api/friend-requests/${user._id }`, {
+                const friendReqResponse = await fetch(`${BACKEND_URL}/api/friend-requests/${user._id}`, {
                     method: "GET",
                     credentials: "include",
                 });
@@ -154,7 +165,7 @@ const FirmProfilePage = () => {
         if (!confirm("Reject this friend request? This action cannot be undone.")) return;
 
         try {
-                   const res = await fetch(`${BACKEND_URL}/api/friend-requests/reject/${requestId}`, {
+            const res = await fetch(`${BACKEND_URL}/api/friend-requests/reject/${requestId}`, {
                 method: "POST",
                 credentials: "include",
             });
@@ -169,7 +180,7 @@ const FirmProfilePage = () => {
         } catch (err) {
             console.error("Reject friend request failed:", err);
             alert(err.message || "Could not reject friend request");
-        } 
+        }
     };
 
     // Calculate stats
@@ -448,6 +459,156 @@ const FirmProfilePage = () => {
                                                             Reject
                                                         </Button>
                                                     </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+
+                    {/* Friends Section - Farmer Friends and Firm Friends */}
+                    <div className="mt-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Farmer Friends */}
+                            <Card>
+                                <div className="px-6 py-4 border-b bg-muted/40">
+                                    <h3 className="text-xl font-semibold flex items-center gap-2">
+                                        <Users className="h-5 w-5 text-farmer" />
+                                        Farmer Friends
+                                        <Badge className="ml-auto bg-farmer/10 text-farmer border-farmer/30">
+                                            {farmerFriends.length}
+                                        </Badge>
+                                    </h3>
+                                </div>
+                                <CardContent className="p-6">
+                                    {farmerFriends.length === 0 ? (
+                                        <div className="text-center py-10 text-muted-foreground">
+                                            <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                            <p className="text-sm">No farmer friends yet</p>
+                                            <p className="text-xs mt-1">Connect with farmers to expand your supplier network</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3 max-h-100 overflow-y-auto">
+                                            {farmerFriends.map((friend, index) => (
+                                                <div
+                                                    key={friend._id || index}
+                                                    className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border hover:shadow-sm transition-shadow"
+                                                >
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                        <div className="w-12 h-12 rounded-full bg-farmer/10 flex items-center justify-center shrink-0">
+                                                            <Users className="h-6 w-6 text-farmer" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-semibold text-foreground truncate">
+                                                                {friend.FirstName && friend.LastName
+                                                                    ? `${friend.FirstName} ${friend.LastName}`
+                                                                    : friend.name || "Farmer"}
+                                                            </p>
+                                                            {(friend.city || friend.state) && (
+                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                                                    <MapPin className="h-3 w-3" />
+                                                                    <span className="truncate">
+                                                                        {friend.city && friend.state
+                                                                            ? `${friend.city}, ${friend.state}`
+                                                                            : friend.city || friend.state || "Location not available"}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            {friend.phoneNumber && (
+                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                                                    <Phone className="h-3 w-3" />
+                                                                    <span>{friend.phoneNumber}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => navigate(`/profile/${friend._id}?userType=farmer`)}
+                                                        className="shrink-0"
+                                                    >
+                                                        View Profile
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Firm Friends */}
+                            <Card>
+                                <div className="px-6 py-4 border-b bg-muted/40">
+                                    <h3 className="text-xl font-semibold flex items-center gap-2">
+                                        <Building2 className="h-5 w-5 text-blue-600" />
+                                        Firm Friends
+                                        <Badge className="ml-auto bg-blue-500/10 text-blue-600 border-blue-500/30">
+                                            {firmFriends.length}
+                                        </Badge>
+                                    </h3>
+                                </div>
+                                <CardContent className="p-6">
+                                    {firmFriends.length === 0 ? (
+                                        <div className="text-center py-10 text-muted-foreground">
+                                            <Building2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                                            <p className="text-sm">No firm connections yet</p>
+                                            <p className="text-xs mt-1">Connect with other firms to expand your network</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3 max-h-100 overflow-y-auto">
+                                            {firmFriends.map((firm, index) => (
+                                                <div
+                                                    key={firm._id || index}
+                                                    className="flex items-center justify-between p-4 bg-blue-500/5 rounded-lg border border-blue-500/20 hover:shadow-sm transition-shadow"
+                                                >
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                        <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                                                            <Building2 className="h-6 w-6 text-blue-600" />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-semibold text-foreground truncate">
+                                                                {firm.CompanyName || "Company"}
+                                                            </p>
+                                                            {firm.ContactPerson && (
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    Contact: {firm.ContactPerson}
+                                                                </p>
+                                                            )}
+                                                            {(firm.city || firm.state) && (
+                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                                                    <MapPin className="h-3 w-3" />
+                                                                    <span className="truncate">
+                                                                        {firm.city && firm.state
+                                                                            ? `${firm.city}, ${firm.state}`
+                                                                            : firm.city || firm.state || "Location not available"}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            {firm.email && (
+                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5 truncate">
+                                                                    <Mail className="h-3 w-3 shrink-0" />
+                                                                    <span className="truncate">{firm.email}</span>
+                                                                </div>
+                                                            )}
+                                                            {firm.phoneNumber && (
+                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                                                    <Phone className="h-3 w-3" />
+                                                                    <span>{firm.phoneNumber}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => navigate(`/profile/${firm._id}?userType=firm`)}
+                                                        className="shrink-0"
+                                                    >
+                                                        View Profile
+                                                    </Button>
                                                 </div>
                                             ))}
                                         </div>

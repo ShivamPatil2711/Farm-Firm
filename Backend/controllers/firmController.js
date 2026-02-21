@@ -132,7 +132,7 @@ exports.getProfile = async (req, res) => {
     }
     const userId = req.user._id;
     // Fetch user profile details
-    const firm = await Firm.findById(userId).select('-password'); // Exclude password
+    const firm = await Firm.findById(userId).select('-password').populate('farmerfriend firmfriend'); // Exclude password
     if (!firm) {
       return res.status(404).json({
         success: false,
