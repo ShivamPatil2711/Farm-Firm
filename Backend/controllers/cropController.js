@@ -130,43 +130,39 @@ exports.updateCrop = async (req, res) => {
 exports.getAllRequests = async (req, res) => {
   try {
     if (!req.isLoggedIn || !req.user) {
-      const requests = await FirmRequest.find({ status: "Pending" }).populate({
-        path: "firmId"
-      });
+      return res.status(401).json({ error: 'Unauthorized – please log in' });
+    }
+    const requests = await FirmRequest.find({ status: "Pending" }).populate({
+      path: "firmId"
+    });
+      /* console.log("requests", requests);
       return res.status(200).json({
         success: true,
         requests: requests
-      });
-    }
-    const userId = req.user._id;
+      });*/
+        const userId = req.user._id;
     const userType = req.user.userType;
 
     if (userType == "farmer") {
-      const requests = await FirmRequest.find({
+    /*  const requests = await FirmRequest.find({
         $or: [
           { status: "Pending" },
           { farmerId: userId }
         ]
       }).populate({
         path: "firmId"
-      });
+      });*/
       return res.status(200).json({
         success: true,
         requests: requests
       });
     } else {
       // 3. Fetch all requests made by this user
-      const requests = await FirmRequest.find({
-        $or: [
-          { status: "Pending" },
-          {
-            status: "Accepted",
-            firmId: userId
-          }
-        ]
-      }).populate({
-        path: "firmId"
-      });
+const requests = await FirmRequest.find({
+  firmId: userId
+})
+.populate("firmId")
+.populate("farmerId");
       // 4. Format response
       return res.status(200).json({
         success: true,

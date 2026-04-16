@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Plus,
   Phone,
+  IndianRupee,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { AuthContext } from "./AuthContext";
@@ -80,6 +81,14 @@ const AllRequests = () => {
             state: req.firmId?.state || "—",
             firmPhone: req.firmId?.phoneNumber || null,
             requirement: req.requirement || "Not specified",
+             farmerId: req.farmerId?._id?.toString() || null,
+             rate: req.rate || null,
+    farmerName: req.farmerId
+      ? `${req.farmerId.FirstName || ""} ${req.farmerId.LastName || ""}`.trim()
+      : "No Farmer Assigned",
+    farmerPhone: req.farmerId?.phoneNumber || null,
+    farmerCity: req.farmerId?.city || "—",
+    farmerState: req.farmerId?.state || "—",
             deadline: req.deadline
               ? new Date(req.deadline).toLocaleDateString("en-IN", {
                 day: "numeric",
@@ -149,7 +158,7 @@ const AllRequests = () => {
             deadline: new Date(data.request?.deadline || formData.deadline).toLocaleDateString("en-IN"),
             requestedAt: new Date().toLocaleDateString("en-IN"),
             status: data.request?.status || "Pending",
-          },
+                     },
           ...prev,
         ]);
         setShowAddForm(false);
@@ -161,7 +170,7 @@ const AllRequests = () => {
     }
   };
 
-  const handleAcceptRequest = async (requestId) => {
+  /*const handleAcceptRequest = async (requestId) => {
     if (!window.confirm("Confirm acceptance of this request?")) return;
 
     try {
@@ -186,7 +195,7 @@ const AllRequests = () => {
     } catch {
       toast.error("Network error during acceptance.");
     }
-  };
+  };*/
 
   const handleCallFirm = (phone) => {
     if (!phone) {
@@ -434,13 +443,13 @@ const AllRequests = () => {
                                 </h3>
                                 <div className="flex items-center gap-2 shrink-0">
                                   {getStatusBadge(req.status)}
-                                  {showCallButton && req.firmPhone && (
+                                  {showCallButton && req.farmerPhone && (
                                     <Button
                                       size="icon"
                                       variant="ghost"
                                       className="h-8 w-8 rounded-full hover:bg-emerald-50"
-                                      onClick={() => handleCallFirm(req.firmPhone)}
-                                      title={`Call ${req.firmName}`}
+                                      onClick={() => handleCallFirm(req.farmerPhone)}
+                                      title={`Call ${req.farmerName}`}
                                     >
                                       <Phone className="h-4 w-4 text-emerald-600" />
                                     </Button>
@@ -452,23 +461,26 @@ const AllRequests = () => {
                                 <div className="flex items-center gap-3">
 
                                   <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-700 font-semibold shrink-0">
-                                    {req.firmName?.charAt(0) || "?"}
+                                    {req.farmerName?.charAt(0) || "?"}
                                   </div>
                                   <span className="font-medium text-gray-800 truncate">
-                                    {req.firmName}
+                                    {req.farmerName}
                                   </span>
                                 </div>
 
                                 <div className="flex items-center gap-2.5 text-gray-600">
                                   <MapPin className="h-4 w-4 flex-shrink-0" />
                                   <span className="truncate">
-                                    {req.city}, {req.state}
+                                    {req.farmerCity}, {req.farmerState}
                                   </span>
                                 </div>
-
-                                <div className="flex items-center gap-2.5 text-gray-600">
+                                    <div className="flex items-center gap-2.5 text-gray-600">
                                   <Package className="h-4 w-4 flex-shrink-0" />
                                   <span>Requirement: {req.requirement}</span>
+                                </div>
+                                <div className="flex items-center gap-2.5 text-gray-600">
+                                <IndianRupee className="h-4 w-4 flex-shrink-0" />
+                                  <span>Rate: {req.rate !== null ? `₹${req.rate}/kg` : 'Not specified'}</span>
                                 </div>
 
                                 <div className="flex items-center gap-2.5 text-gray-600">
@@ -573,7 +585,7 @@ const AllRequests = () => {
                                     </Button>
                                   )}
 
-                                  {showAcceptButton && (
+                                {/*showAcceptButton && (
                                     <Button
                                       onClick={() => handleAcceptRequest(req.id)}
                                       variant="outline"
@@ -581,7 +593,7 @@ const AllRequests = () => {
                                     >
                                       Accept This Request
                                     </Button>
-                                  )}
+                                  )*/}
 
                                   {canViewQuotations(req) && (
                                     <Button

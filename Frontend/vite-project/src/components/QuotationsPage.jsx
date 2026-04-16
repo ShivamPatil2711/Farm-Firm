@@ -43,8 +43,7 @@ const QuotationsPage = () => {
                 }
 
                 const data = await response.json();
-
-                if (data?.success) {
+                          if (data?.success) {
                     const sorted = Array.isArray(data.quotations)
                         ? data.quotations.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                         : [];
@@ -71,42 +70,80 @@ const QuotationsPage = () => {
         return quotations[0]?.firmRequestId || null;
     }, [quotations]);
 
-    const updateQuotationStatus = async (quotationId, action) => {
-        const confirmMessage =
-            action === "accept"
-                ? "Are you sure you want to accept this quotation?"
-                : "Are you sure you want to reject this quotation?";
+ const updateQuotationStatus = async (quotationId, action) => {
+    const confirmMessage =
+        action === "accept"
+            ? "Are you sure you want to accept this quotation?"
+            : "Are you sure you want to reject this quotation?";
 
-        if (!window.confirm(confirmMessage)) return;
+    if (!window.confirm(confirmMessage)) return;
 
-        setProcessingId(quotationId);
-        try {
-            const response = await fetch(`${BACKEND_URL}/api/quotation/${action}/${quotationId}`, {
+    setProcessingId(quotationId);
+
+    try {
+        const response = await fetch(
+            `${BACKEND_URL}/api/quotation/${action}/${quotationId}`,
+            {
                 method: "POST",
                 credentials: "include",
-            });
-
-            const data = await response.json();
-
-            if (!response.ok || !data?.success) {
-                throw new Error(data?.message || `Unable to ${action} quotation`);
             }
+        );
 
-            const nextStatus = action === "accept" ? "Accepted" : "Rejected";
-            setQuotations((prev) =>
-                prev.map((item) =>
-                    item._id === quotationId ? { ...item, status: nextStatus } : item
-                )
+        const data = await response.json();
+
+        if (!response.ok || !data?.success) {
+            throw new Error(data?.message || `Unable to ${action} quotation`);
+        }
+
+        // 🔥 helper to normalize ObjectId / populated object
+        const getId = (id) => {
+            if (!id) return null;
+            if (typeof id === "string") return id;
+            if (id._id) return id._id.toString();
+            return id.toString();
+        };
+
+        setQuotations((prev) => {
+            const selectedQuotation = prev.find(
+                (q) => getId(q._id) === getId(quotationId)
             );
 
-            toast.success(`Quotation ${action}ed successfully.`);
-        } catch (err) {
-            toast.error(err.message || `Failed to ${action} quotation.`);
-        } finally {
-            setProcessingId(null);
-        }
-    };
+            if (!selectedQuotation) return prev;
 
+            const selectedFirmId = getId(selectedQuotation.firmRequestId);
+
+            return prev.map((item) => {
+                const itemId = getId(item._id);
+                const itemFirmId = getId(item.firmRequestId);
+
+                // ✅ ACCEPT CASE
+                if (action === "accept") {
+                    if (itemId === getId(quotationId)) {
+                        return { ...item, status: "Accepted" };
+                    }
+
+                    // reject all others with same firmRequestId
+                    if (itemFirmId === selectedFirmId) {
+                        return { ...item, status: "Rejected" };
+                    }
+                }
+
+                // ✅ REJECT CASE
+                if (action === "reject" && itemId === getId(quotationId)) {
+                    return { ...item, status: "Rejected" };
+                }
+
+                return item;
+            });
+        });
+
+        toast.success(`Quotation ${action}ed successfully.`);
+    } catch (err) {
+        toast.error(err.message || `Failed to ${action} quotation.`);
+    } finally {
+        setProcessingId(null);
+    }
+};
     const getStatusPill = (status) => {
         const normalized = (status || "Pending").toLowerCase();
 

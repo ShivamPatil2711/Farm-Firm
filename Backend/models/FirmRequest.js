@@ -24,6 +24,10 @@ required:true
     ref: 'Farmer',  // or 'User' — depending on your auth model
     default: null
   },
+  rate:{
+    type:Number,
+    default:null
+  },
   createdAt: {
     type: Date,
     default: Date.now

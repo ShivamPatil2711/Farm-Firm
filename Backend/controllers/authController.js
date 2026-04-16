@@ -205,7 +205,7 @@ exports.postSignup = [
           message: 'Invalid user type',
         });
       }
-console.log(newUser);
+
       await newUser.save();
 
       return res.status(201).json({
@@ -247,7 +247,6 @@ exports.checkAuth = async (req, res, next) => {
 } else {
 user = await Firm.findById(decoded.userId).select('email  _id');
 }
-      console.log("from authcheck",decoded)
     if (!user) {
       res.clearCookie('Usercookie', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
       return res.status(200).json({ isLoggedIn: false, user: null });

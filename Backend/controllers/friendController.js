@@ -21,7 +21,6 @@ exports.getAllUsers = async (req, res) => {
     }));
 
        const allUsers = [...allFarmers, ...allFirms];
-       console.log("Combined users list:", allUsers); // Debug log to check the combined list of users
         res.json(allUsers);
     } catch (error) {
         console.error('Error fetching users:', error);

@@ -60,15 +60,37 @@ exports.postQuotation = async (req, res) => {
 exports.acceptQuotation = async (req, res) => {
     try {
         const quotationId = req.params.quotationId;
+
         const quotation = await Quotation.findById(quotationId);
         if (!quotation) {
             return res.status(404).json({ message: 'Quotation not found' });
         }
+
+        // 1. Accept selected quotation
         quotation.status = 'Accepted';
         await quotation.save();
-        // Update the related FirmRequest status to "Accepted"
-        await FirmRequest.findByIdAndUpdate(quotation.firmRequestId, { status: 'Accepted', farmerId: quotation.farmerId });
+
+        // 2. Reject all other quotations for same firmRequest
+        await Quotation.updateMany(
+            {
+                firmRequestId: quotation.firmRequestId,
+                _id: { $ne: quotationId }
+            },
+            { $set: { status: 'Rejected' } }
+        );
+
+        // 3. Update FirmRequest
+        await FirmRequest.findByIdAndUpdate(
+            quotation.firmRequestId,
+            {
+                status: 'Accepted',
+                farmerId: quotation.farmerId,
+                rate: quotation.rate
+            }
+        );
+
         res.status(200).json({ success: true, quotation });
+
     } catch (error) {
         res.status(500).json({ message: 'Error accepting quotation', error });
     }
