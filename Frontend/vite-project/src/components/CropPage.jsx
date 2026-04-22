@@ -281,7 +281,7 @@ const CropPage = () => {
                       </div>
 
                       {/* Buyers Section */}
-                      <div className="pt-2 border-t border-gray-100">
+             {user && user.userType=="firm" &&          <div className="pt-2 border-t border-gray-100">
                         <p className="text-xs text-gray-500 font-medium mb-1.5 flex items-center gap-1.5">
                           <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                           Bought by friends
@@ -308,6 +308,7 @@ const CropPage = () => {
                           </p>
                         )}
                       </div>
+}
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t">

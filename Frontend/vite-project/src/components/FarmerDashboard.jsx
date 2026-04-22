@@ -189,7 +189,31 @@ const FarmerDashboard = () => {
       [name]: value,
     }));
   };
+const handleDeleteCrop = async (cropId) => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/crop/${cropId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+        credentials: "include",
 
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to delete crop");
+    }
+
+    // ✅ Remove from UI instantly
+    setListedCrops((prev) => prev.filter(crop => crop._id !== cropId));
+
+  } catch (err) {
+    console.error("Delete error:", err);
+    alert(err.message);
+  }
+};
   const handleAcceptRequest = async (requestId) => {
     if (!confirm("Accept this friend request?")) return;
 
@@ -469,7 +493,7 @@ const FarmerDashboard = () => {
                             <td className="p-4">
                               <div className="flex items-center gap-2">
                                 <button
-                                  onClick={() => navigate(`/crop/${crop._id}`)}
+                                  onClick={() => navigate(`/crop-details/${crop._id}`)}
                                   className="p-2 hover:bg-muted rounded-lg transition-colors"
                                 >
                                   <Eye className="h-4 w-4 text-muted-foreground" />
@@ -480,9 +504,12 @@ const FarmerDashboard = () => {
                                 >
                                   <Edit2 className="h-4 w-4 text-muted-foreground" />
                                 </button>
-                                <button className="p-2 hover:bg-red-500/10 rounded-lg transition-colors">
-                                  <Trash2 className="h-4 w-4 text-red-500" />
-                                </button>
+                               <button
+  onClick={() => handleDeleteCrop(crop._id)}
+  className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"
+>
+  <Trash2 className="h-4 w-4 text-red-500" />
+</button>
                               </div>
                             </td>
                           </tr>

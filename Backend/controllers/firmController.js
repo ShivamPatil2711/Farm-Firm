@@ -105,7 +105,6 @@ exports.getMyRequests = async (req, res) => {
       .populate({
         path: 'cropId farmerId'
       })
-     console.log("jkbkjhb",requests);
     // 4. Format response
     return res.status(200).json({
       success: true,

@@ -59,20 +59,7 @@ const HeroSection = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 md:gap-12 mt-16 pt-12 border-t border-white/20">
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold text-emerald-400">5000+</p>
-              <p className="mt-2 text-sm text-white/70">Registered Farmers</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold text-emerald-400">500+</p>
-              <p className="mt-2 text-sm text-white/70">Partner Firms</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl md:text-4xl font-bold text-emerald-400">₹50Cr+</p>
-              <p className="mt-2 text-sm text-white/70">Trade Value</p>
-            </div>
-          </div>
+        
         </div>
       </div>
     </section>

@@ -1,37 +1,44 @@
+import {
+  Leaf,
+  Send,
+  IndianRupee,
+  Handshake,
+  Network,
+  BarChart3,
+} from "lucide-react";
 const FeatureSection = () => {
-  const features = [
+ const features = [
   {
-    icon: "📍",
-    title: "Location-Based Search",
-    description: "Find farmers near you to reduce transportation costs and support local trade.",
+    icon: Leaf,
+    title: "Direct Farm-to-Firm Deals",
+    description: "Cut out middlemen and connect directly with buyers and sellers for faster, more profitable trades.",
   },
   {
-    icon: "📈",
-    title: "Real-Time Pricing",
-    description: "Live crop prices updated dynamically based on market trends and listings.",
+    icon: Send,
+    title: "Smart Request System",
+    description: "Firms send requests, farmers decide. Full control to accept, reject, or negotiate deals your way.",
   },
   {
-    icon: "⚖️",
-    title: "Price Comparison",
-    description: "Compare prices across multiple farmers with advanced filtering options.",
+    icon: IndianRupee,
+    title: "Competitive Bidding",
+    description: "Reach multiple farmers at once, receive quotes, and choose the best deal without hassle.",
   },
   {
-    icon: "📦",
-    title: "Crop Listings",
-    description: "Detailed crop information including quality, quantity, and availability.",
+    icon: Handshake,
+    title: "Trusted Network Insights",
+    description: "See which farmers or firms your connections already work with before making a decision.",
   },
   {
-    icon: "🧾",
-    title: "Transaction History",
-    description: "Complete records of all transactions for transparency and trust.",
+    icon: Network,
+    title: "Build Your Trade Network",
+    description: "Add and manage connections to create a reliable circle of farmers and business partners.",
   },
   {
-    icon: "📊",
-    title: "Smart Dashboards",
-    description: "Role-based dashboards with analytics, earnings, and spending insights.",
+    icon: BarChart3,
+    title: "Actionable Dashboards",
+    description: "Track requests, deals, and earnings with clean dashboards designed for both farmers and firms.",
   },
 ];
-
   return (
     <section className="py-20 md:py-24 bg-gray-50">
       <div className="container mx-auto px-5 sm:px-6 lg:px-8">
@@ -56,10 +63,9 @@ const FeatureSection = () => {
                 animation: "fadeInUp 0.7s forwards",
               }}
             >
-              <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center mb-6 text-3xl group-hover:bg-emerald-600 group-hover:scale-110 group-hover:text-white transition-all duration-300">
-                {feature.icon}
-              </div>
-
+          <div className="w-14 h-14 rounded-xl bg-emerald-100 flex items-center justify-center mb-6 group-hover:bg-emerald-600 group-hover:scale-110 transition-all duration-300">
+  <feature.icon className="w-6 h-6 text-emerald-600 group-hover:text-white" />
+</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">
                 {feature.title}
               </h3>

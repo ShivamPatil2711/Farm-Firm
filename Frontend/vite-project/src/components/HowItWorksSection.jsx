@@ -2,20 +2,20 @@
 
 const steps = [
   {
-    title: "Create Your Profile",
-    description: "Sign up as a farmer or firm with your location, crops, and contact details.",
+    title: "Register & Login",
+    description: "Users sign up as a farmer or firm and securely log in to access the platform.",
   },
   {
-    title: "Discover & Connect",
-    description: "Farmers list crops; firms search by location, crop type, and price range.",
+    title: "Create & Explore Crops",
+    description: "Farmers add crop details, while firms browse and filter available crops.",
   },
   {
-    title: "Negotiate & Agree",
-    description: "Compare prices, discuss terms, and agree on fair pricing.",
+    title: "Send Request with Quotation",
+    description: "Firms select crops and send a request along with their quotation.",
   },
   {
-    title: "Complete Transaction",
-    description: "Finalize the deal with complete transparency and record-keeping.",
+    title: "Review & Respond",
+    description: "Farmers review the request, check firm details, and accept or reject it.",
   },
 ];
 
