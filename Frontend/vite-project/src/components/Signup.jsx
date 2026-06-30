@@ -27,7 +27,7 @@ const Signup = () => {
   });
 
   const navigate = useNavigate();
-  const backendApiUrl =  "http://localhost:4003";
+  const backendApiUrl = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -14,7 +14,7 @@ import {
 import { Search, Filter, ArrowUpDown, Star, MapPin, Package, Plus } from "lucide-react";
 import { AuthContext } from "./AuthContext";
 
-const BACKEND_URL = "http://localhost:4003";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
 
 const CropPage = () => {
   const navigate = useNavigate();

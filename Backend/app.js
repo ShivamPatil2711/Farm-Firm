@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 
@@ -6,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 //const errors = require('./controllers/errors');
 const mongoose = require('mongoose');
-const MONGODB_URL = 'mongodb://127.0.0.1:27017/farmproject';
+const MONGODB_URL = process.env.MONGO_URI;
 const authrouter = require('./routes/authrouter');
 const PORT = process.env.PORT || 4003;
 const farmerrouter = require('./routes/farmerRouter');
@@ -16,14 +17,14 @@ const adminrouter = require('./routes/adminrouter');
 const friendrouter = require('./routes/friendRouter');
 const quotationrouter = require('./routes/quotationRouter');
 
-require('dotenv').config();
+
 
 const app = express();
-const FRONTEND_URL = 'http://localhost:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL;
 
 // 🔐 CORS CONFIG
 const allowedOrigins = [
-  'http://localhost:5173',
+  process.env.FRONTEND_URL,
 ];
 
 app.use(
@@ -60,7 +61,7 @@ app.use((req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, "sjbkjsbfkjafbjkasbdjka");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.isLoggedIn = true;
     req.user = {
       _id: decoded.userId,

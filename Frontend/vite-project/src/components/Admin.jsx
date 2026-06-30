@@ -18,7 +18,8 @@ const AdminDashboard = () => {
       setError(null);
 
       try {
-        const response = await fetch('http://localhost:4003/api/admin', {
+        const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
+        const response = await fetch(`${BACKEND_URL}/api/admin`, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',

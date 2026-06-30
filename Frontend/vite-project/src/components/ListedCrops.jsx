@@ -7,7 +7,7 @@ import { Badge } from "./Badge";
 import { Button } from "./Button";
 import { Package, IndianRupee, MapPin, AlertTriangle, Plus } from "lucide-react";
 
-const BACKEND_URL = "http://localhost:4003"; // or import.meta.env.VITE_BACKEND_API_URL
+const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
 
 const ListedCrops = () => {
   const navigate = useNavigate();

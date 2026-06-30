@@ -23,7 +23,7 @@ exports.postLogin = async (req, res, next) => {
     }
     const token = jwt.sign(
       { userId: existingUser._id, email: existingUser.email, userType },
-      "sjbkjsbfkjafbjkasbdjka",
+      process.env.JWT_SECRET,
       { expiresIn: '2h' }
     );
     res.cookie('Usercookie', token, {
@@ -238,7 +238,7 @@ exports.checkAuth = async (req, res, next) => {
     if (!token) {
       return res.status(200).json({ isLoggedIn: false, user: null });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "sjbkjsbfkjafbjkasbdjka");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userType=decoded.userType;
    
     let user;
@@ -263,7 +263,7 @@ exports.getProfile = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "sjbkjsbfkjafbjkasbdjka");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId);
         if (!user) {
       return res.status(404).json({ error: 'User not found' });

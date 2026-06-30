@@ -17,7 +17,7 @@ import { Upload, X, Plus } from "lucide-react";
 
 const AddCrop = () => {
   const navigate = useNavigate();
-const backend_url="http://localhost:4003";
+const backend_url = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
   const [formData, setFormData] = useState({
     name: "",
     price: "",
