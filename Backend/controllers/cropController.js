@@ -152,53 +152,53 @@ exports.updateCrop = async (req, res) => {
 };
 exports.getAllRequests = async (req, res) => {
   try {
+    // Not logged in -> show all pending requests
     if (!req.isLoggedIn || !req.user) {
-      return res.status(401).json({ error: 'Unauthorized – please log in' });
-    }
-    const requests = await FirmRequest.find({ status: "Pending" }).populate({
-      path: "firmId"
-    });
-      /* console.log("requests", requests);
-      return res.status(200).json({
-        success: true,
-        requests: requests
-      });*/
-        const userId = req.user._id;
-    const userType = req.user.userType;
+      const requests = await FirmRequest.find({ status: "Pending" })
+        .populate("firmId");
 
-    if (userType == "farmer") {
-    /*  const requests = await FirmRequest.find({
-        $or: [
-          { status: "Pending" },
-          { farmerId: userId }
-        ]
-      }).populate({
-        path: "firmId"
-      });*/
       return res.status(200).json({
         success: true,
-        requests: requests
-      });
-    } else {
-      // 3. Fetch all requests made by this user
-const requests = await FirmRequest.find({
-  firmId: userId
-})
-.populate("firmId")
-.populate("farmerId");
-      // 4. Format response
-      return res.status(200).json({
-        success: true,
-        requests: requests
+        requests,
       });
     }
+
+    const { _id: userId, userType } = req.user;
+
+    // Farmer -> show all pending requests
+    if (userType === "farmer") {
+      const requests = await FirmRequest.find({ status: "Pending" })
+        .populate("firmId");
+
+      return res.status(200).json({
+        success: true,
+        requests,
+      });
+    }
+
+    // Firm -> show ALL requests created by this firm (all statuses)
+    if (userType === "firm") {
+      const requests = await FirmRequest.find({ firmId: userId })
+        .populate("firmId")
+        .populate("farmerId");
+
+      return res.status(200).json({
+        success: true,
+        requests,
+      });
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: "Invalid user type",
+    });
 
   } catch (error) {
-    console.error('Error in getAllRequests:', error);
+    console.error("Error in getAllRequests:", error);
 
     return res.status(500).json({
       success: false,
-      error: 'Failed to fetch your  all requests',
+      error: "Failed to fetch requests",
     });
   }
 };
