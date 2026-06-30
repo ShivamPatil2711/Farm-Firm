@@ -106,11 +106,11 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5 shrink-0">
             <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
               <span className="text-emerald-50 text-2xl">🌾</span>
             </div>
-            <span className="font-bold text-xl text-gray-900">KrishiConnect</span>
+            <span className="hidden md:block font-bold text-xl text-gray-900">KrishiConnect</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -236,9 +236,54 @@ const Navbar = () => {
             )}
           </div>
 
+          {/* Mobile Search Bar (right of logo, left of burger) */}
+          {isLoggedIn && (
+            <div className="md:hidden flex-1 mx-3 relative">
+              <input
+                type="text"
+                placeholder="Search firms & farmers..."
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white/90"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(e.target.value.trim().length > 0);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim().length > 0) setShowSuggestions(true);
+                }}
+              />
+              {/* Mobile suggestion dropdown */}
+              {showSuggestions && (
+                <div className="absolute top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto z-50 text-sm">
+                  {filteredSuggestions.length > 0 ? (
+                    filteredSuggestions.map((item) => (
+                      <button
+                        key={item._id || item.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors flex items-center justify-between gap-2"
+                        onClick={() => {
+                          navigate(`/profile/${item.id}?userType=${item.userType}`);
+                          setSearchQuery("");
+                          setShowSuggestions(false);
+                        }}
+                      >
+                        <span className="font-medium text-gray-900 truncate">{item.name || "Unnamed"}</span>
+                        <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">
+                          {item.userType} • {item.city || "—"}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2.5 text-gray-500 italic">No results found</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Mobile Menu Toggle */}
           <button
-            className="md:hidden p-2 text-gray-700"
+            className="md:hidden p-2 text-gray-700 shrink-0"
             onClick={() => setIsOpen(!isOpen)}
             aria-label="Toggle menu"
           >
