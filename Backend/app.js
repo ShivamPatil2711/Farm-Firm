@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET is required. Add it to Backend/.env before starting the server.');
+}
+
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
@@ -20,20 +24,15 @@ const quotationrouter = require('./routes/quotationRouter');
 
 
 const app = express();
-const FRONTEND_URL = process.env.FRONTEND_URL;
-
-// 🔐 CORS CONFIG
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL || 'http://localhost:5173',
 ];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // Postman / curl
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, origin);
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
 
       return callback(new Error('Not allowed by CORS'));
@@ -41,8 +40,6 @@ app.use(
     credentials: true,
   })
 );
-
-app.options('*', cors());
 
 // 🧩 Middlewares
 app.use(cookieParser());
@@ -76,7 +73,10 @@ app.use((req, res, next) => {
   next();
 });
 
+const mlRouter = require('./routes/mlRouter');
+
 // 🌍 Public routes
+app.use('/api/ml', mlRouter);
 app.use(croprouter);
 app.use(authrouter);
 app.use(friendrouter);
@@ -100,4 +100,3 @@ mongoose
   .catch((err) => {
     console.error('Mongo connection error:', err);
   });
-

@@ -15,7 +15,10 @@ import {
   Plus,
   Phone,
   Users,          // ← NEW: added for friends icon
+  Star,
 } from 'lucide-react';
+import FirmReviewModal from './FirmReviewModal';
+import FirmReviewsModal from './FirmReviewsModal';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:4003';
 
@@ -25,6 +28,8 @@ const FarmerRequests = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processingId, setProcessingId] = useState(null);
+  const [reviewRequest, setReviewRequest] = useState(null);
+  const [reviewsFirm, setReviewsFirm] = useState(null);
 
   useEffect(() => {
     const fetchFarmerRequests = async () => {
@@ -79,7 +84,7 @@ const FarmerRequests = () => {
       } else {
         toast.error(result.error || 'Failed to accept request');
       }
-    } catch (err) {
+    } catch {
       toast.error('Network error while accepting request');
     } finally {
       setProcessingId(null);
@@ -104,7 +109,7 @@ const FarmerRequests = () => {
       } else {
         toast.error(result.error || 'Failed to reject request');
       }
-    } catch (err) {
+    } catch {
       toast.error('Network error while rejecting request');
     } finally {
       setProcessingId(null);
@@ -182,6 +187,7 @@ const FarmerRequests = () => {
                   const firmCity = req.firmId?.city || '—';
                   const firmState = req.firmId?.state || '—';
                   const phone = req.firmId?.phoneNumber || null;
+                  const reviewSummary = req.reviewSummary || { averageRating: 0, reviewCount: 0 };
 
                   return (
                     <div
@@ -275,6 +281,22 @@ const FarmerRequests = () => {
                             </span>
                           </div>
 
+                          <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                            <span className="flex items-center gap-1.5 text-sm text-gray-600">
+                              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                              {reviewSummary.reviewCount
+                                ? `${reviewSummary.averageRating.toFixed(1)} (${reviewSummary.reviewCount})`
+                                : 'No reviews yet'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setReviewsFirm(req.firmId)}
+                              className="text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:underline"
+                            >
+                              View All Reviews
+                            </button>
+                          </div>
+
                           {phone && (
                             <div className="flex items-center gap-2.5 text-gray-600 pt-1 border-t border-gray-100 pt-4">
                               <Phone className="h-4 w-4 flex-shrink-0 text-emerald-600" />
@@ -354,6 +376,16 @@ const FarmerRequests = () => {
                             </button>
                           </div>
                         )}
+
+                        {(status === 'accepted' || status === 'completed') && (
+                          <button
+                            type="button"
+                            onClick={() => setReviewRequest(req)}
+                            className="mt-4 w-full rounded-xl border border-emerald-600 px-4 py-3 font-medium text-emerald-700 transition-colors hover:bg-emerald-50"
+                          >
+                            Review Firm
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -363,6 +395,19 @@ const FarmerRequests = () => {
           )}
         </div>
       </main>
+      {reviewRequest && (
+        <FirmReviewModal
+          request={reviewRequest}
+          onClose={() => setReviewRequest(null)}
+          onSaved={() => setReviewRequest(null)}
+        />
+      )}
+      {reviewsFirm && (
+        <FirmReviewsModal
+          firm={reviewsFirm}
+          onClose={() => setReviewsFirm(null)}
+        />
+      )}
     </div>
   );
 };

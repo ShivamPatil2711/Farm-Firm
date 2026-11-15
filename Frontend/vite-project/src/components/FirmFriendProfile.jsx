@@ -6,6 +6,7 @@ import { Button } from "./Button";
 import { User, MapPin, Building, Phone, Mail, Loader2, UserPlus, AlertCircle } from "lucide-react";
 
 import { AuthContext } from "./AuthContext";   // Adjust path if needed
+import FirmReviewsSection from "./FirmReviewsSection";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
 
@@ -231,6 +232,7 @@ const FirmFriendProfile = ({ id }) => {
                 </div>
               </div>
             </div>
+            <FirmReviewsSection firm={firm} />
           </CardContent>
         </Card>
 

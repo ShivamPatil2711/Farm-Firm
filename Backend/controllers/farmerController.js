@@ -6,6 +6,7 @@ const Farmer = require('../models/Farmer');     // your Farmer model
 const Request = require('../models/Request');     // your Farmer model
 const FirmRequest=require('../models/FirmRequest');
 const Firm = require('../models/Firm');     // your Firm model
+const Review = require('../models/Review');
 const sendSMS = require('../servicesms'); // Twilio SMS service
 const mongoose = require('mongoose');
 // ────────────────────────────────────────────────
@@ -216,6 +217,27 @@ exports.getRequestedCrops = async (req, res) => {
       .populate("cropId")
       .populate("firmId", "CompanyName city state");
 
+    const firmIds = requests.map(request => request.firmId?._id).filter(Boolean);
+    const reviewSummaries = await Review.aggregate([
+      { $match: { firm: { $in: firmIds } } },
+      {
+        $group: {
+          _id: '$firm',
+          averageRating: { $avg: '$rating' },
+          reviewCount: { $sum: 1 }
+        }
+      }
+    ]);
+    const reviewSummaryByFirm = new Map(
+      reviewSummaries.map(summary => [
+        summary._id.toString(),
+        {
+          averageRating: Number(summary.averageRating.toFixed(1)),
+          reviewCount: summary.reviewCount
+        }
+      ])
+    );
+
 
 
     // Get farmer friends and their firmsbuyer
@@ -249,6 +271,10 @@ exports.getRequestedCrops = async (req, res) => {
       // Attach info to request
       return {
         ...requestObj,
+        reviewSummary: reviewSummaryByFirm.get(requestFirmId) || {
+          averageRating: 0,
+          reviewCount: 0
+        },
         friendsWorkedWithFirm
       };
 

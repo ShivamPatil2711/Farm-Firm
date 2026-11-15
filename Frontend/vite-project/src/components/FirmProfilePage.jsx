@@ -30,6 +30,7 @@ import {
     AlertCircle,
     Users,
 } from "lucide-react";
+import FirmReviewsSection from "./FirmReviewsSection";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
 
@@ -229,6 +230,8 @@ const FirmProfilePage = () => {
                             Find the best farmers and crops for your business.
                         </p>
                     </div>
+
+                    {profileData && <FirmReviewsSection firm={profileData} />}
 
                     {/* Stats Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

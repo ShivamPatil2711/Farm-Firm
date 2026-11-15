@@ -31,6 +31,9 @@ import {
   Mail,
   Phone,
 } from "lucide-react";
+import DemandInsights from "./DemandInsights";
+import SuggestedConnections from "./SuggestedConnections";
+import SuggestedFarmers from "./SuggestedFarmers";
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:4003";
 
@@ -523,8 +526,11 @@ const handleDeleteCrop = async (cropId) => {
           </div>
 
           {/* ── NEW: Pending Friend Requests Section ── */}
-           <div className="lg:col-span-1">
-                            <Card className="h-full shadow-md">
+           <div className="lg:col-span-1 flex flex-col gap-6">
+                            <DemandInsights userState={profileData?.state} />
+                            <SuggestedConnections />
+                            <SuggestedFarmers />
+                            <Card className="shadow-md">
                                 <div className="px-6 py-4 border-b bg-muted/40">
                                     <h3 className="text-lg font-semibold flex items-center gap-2">
                                         <UserPlus className="h-5 w-5 text-amber-600" />

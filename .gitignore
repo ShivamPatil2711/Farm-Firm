@@ -27,3 +27,5 @@ dist-ssr
 .env
 Backend/.env
 Frontend/vite-project/.env
+
+ML-Service/models/

@@ -1,6 +1,7 @@
 const Farmer = require('../models/Farmer');
 const Firm = require('../models/Firm');
 const FriendRequest = require('../models/FriendRequest');
+const Review = require('../models/Review');
 exports.getAllUsers = async (req, res) => {
     try {
     let allFarmers = await Farmer.find({}); // Fetch only name, location, and 
@@ -273,5 +274,188 @@ exports.rejectFriendRequest = async (req, res) => {
   } catch (error) {
     console.error('Error rejecting friend request:', error);
     res.status(500).json({ message: 'Server error' });
-  } 
+}
+};
+
+exports.getSuggestedFirms = async (req, res) => {
+  try {
+    const farmerId = req.user._id;
+
+    // 1. Fetch the current farmer to know their friends, crops, and location
+    const farmer = await Farmer.findById(farmerId).populate('listedCrops');
+    if (!farmer) return res.status(404).json({ error: "Farmer not found" });
+
+    const farmerFriends = farmer.farmerfriend || [];
+    const firmFriends = farmer.firmfriend || [];
+    
+    // 2. Use MongoDB Aggregation Pipeline to score and sort Firms
+    const suggestions = await Firm.aggregate([
+      // Step A: Exclude firms that are already friends
+      { 
+        $match: { 
+          _id: { $nin: firmFriends } 
+        } 
+      },
+      // Step B: Calculate Match Scores dynamically
+      {
+        $addFields: {
+          // Find Mutual Friends (Intersection of Firm's farmer friends and Farmer's farmer friends)
+          mutualFriends: { $setIntersection: ["$farmerfriend", farmerFriends] },
+          
+          // Check Location Match
+          isSameCity: { $cond: [{ $eq: ["$city", farmer.city] }, 30, 0] },
+          isSameState: { $cond: [{ $eq: ["$state", farmer.state] }, 15, 0] }
+        }
+      },
+      {
+        $lookup: {
+          from: Review.collection.name,
+          let: { firmId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$firm", "$$firmId"] },
+                    { $ne: ["$farmer", farmer._id] }
+                  ]
+                }
+              }
+            },
+            {
+              $group: {
+                _id: null,
+                averageRating: { $avg: "$rating" },
+                reviewCount: { $sum: 1 }
+              }
+            }
+          ],
+          as: "reviewStats"
+        }
+      },
+      {
+        $addFields: {
+          mutualFriendsCount: { $size: { $ifNull: ["$mutualFriends", []] } },
+          averageRating: { $ifNull: [{ $arrayElemAt: ["$reviewStats.averageRating", 0] }, 0] },
+          reviewCount: { $ifNull: [{ $arrayElemAt: ["$reviewStats.reviewCount", 0] }, 0] }
+        }
+      },
+      {
+        $addFields: {
+          // A firm's average rating contributes up to 25 points.
+          totalScore: {
+            $add: [
+              { $multiply: [{ $size: { $ifNull: ["$mutualFriends", []] } }, 15] },
+              "$isSameCity",
+              "$isSameState",
+              { $multiply: ["$averageRating", 5] }
+            ]
+          }
+        }
+      },
+      // Step C: Only keep firms that have some relevance (Score > 0)
+      { 
+        $match: { 
+          totalScore: { $gt: 0 } 
+        } 
+      },
+      // Step D: Sort by highest score
+      { 
+        $sort: { totalScore: -1 } 
+      },
+      // Step E: Limit to top 5 suggestions
+      { 
+        $limit: 5 
+      },
+      // Step F: Format the output
+      {
+        $project: {
+          CompanyName: 1,
+          city: 1,
+          state: 1,
+          totalScore: 1,
+          mutualFriendsCount: 1,
+          isSameCity: 1,
+          isSameState: 1,
+          averageRating: 1,
+          reviewCount: 1
+        }
+      }
+    ]);
+
+    res.status(200).json({ success: true, suggestions });
+
+  } catch (error) {
+    console.error("Recommendation Error:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+};
+
+exports.getSuggestedFarmers = async (req, res) => {
+  try {
+    const farmerId = req.user._id;
+
+    const farmer = await Farmer.findById(farmerId);
+    if (!farmer) return res.status(404).json({ error: "Farmer not found" });
+
+    const farmerObjectId = farmer._id;
+    const farmerFriends = farmer.farmerfriend || [];
+    
+    const suggestions = await Farmer.aggregate([
+      { 
+        $match: { 
+          _id: {
+            $ne: farmerObjectId,
+            $nin: farmerFriends
+          }
+        } 
+      },
+      {
+        $addFields: {
+          mutualFriends: { $setIntersection: ["$farmerfriend", farmerFriends] },
+          isSameCity: { $cond: [{ $eq: ["$city", farmer.city] }, 30, 0] },
+          isSameState: { $cond: [{ $eq: ["$state", farmer.state] }, 15, 0] }
+        }
+      },
+      {
+        $addFields: {
+          mutualFriendsCount: { $size: { $ifNull: ["$mutualFriends", []] } },
+          totalScore: {
+            $add: [
+              { $multiply: [{ $size: { $ifNull: ["$mutualFriends", []] } }, 15] },
+              "$isSameCity",
+              "$isSameState"
+            ]
+          }
+        }
+      },
+      { 
+        $match: { 
+          totalScore: { $gt: 0 } 
+        } 
+      },
+      { 
+        $sort: { totalScore: -1 } 
+      },
+      { 
+        $limit: 5 
+      },
+      {
+        $project: {
+          FirstName: 1,
+          LastName: 1,
+          city: 1,
+          state: 1,
+          totalScore: 1,
+          mutualFriendsCount: 1
+        }
+      }
+    ]);
+
+    res.status(200).json({ success: true, suggestions });
+
+  } catch (error) {
+    console.error("Farmer Recommendation Error:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
 };

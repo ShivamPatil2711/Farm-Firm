@@ -132,6 +132,35 @@ MongoDB must be active for the backend to function.
   mongod
   ```
 
+### Seed Price-Suggestion Test Data
+
+After starting MongoDB, run the following from the `ML-Service` directory to create
+eight weeks of synthetic accepted quotation history for Wheat:
+
+```powershell
+python seed_price_data.py
+```
+
+You can seed another crop or price:
+
+```powershell
+python seed_price_data.py --crop Rice --base-price 3200 --weeks 8
+```
+
+The script replaces only records created by the same seed for that crop. It does
+not modify real requests or quotations. The price suggestion endpoint can then be
+tested at `/api/ml/demand/price/Wheat`.
+
+To seed demand-insight history for several crops, run:
+
+```powershell
+python seed_demand_data.py
+```
+
+This creates 52 weekly request observations for Wheat, Rice, and Tomato so the
+`/api/ml/demand/hot-crops` endpoint can produce forecasts. It replaces only its
+own marked demo records.
+
 ---
 
 ## API Routes

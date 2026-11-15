@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "./Select";
 import { Badge } from "./Badge";
-import { Upload, X, Plus } from "lucide-react";
+import { Loader2, Sparkles, Upload, X, Plus } from "lucide-react";
 
 const AddCrop = () => {
   const navigate = useNavigate();
@@ -32,14 +32,71 @@ const backend_url = import.meta.env.VITE_BACKEND_API_URL || "http://localhost:40
   const [imageFile, setImageFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [priceSuggestion, setPriceSuggestion] = useState(null);
+  const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
+  const [suggestionError, setSuggestionError] = useState("");
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "name") {
+      setPriceSuggestion(null);
+      setSuggestionError("");
+    }
     // Clear error when user types
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+  };
+
+  const handlePriceSuggestion = async () => {
+    const cropName = formData.name.trim();
+    if (!cropName) {
+      setErrors((prev) => ({ ...prev, name: "Enter a crop name first" }));
+      return;
+    }
+
+    setIsLoadingSuggestion(true);
+    setSuggestionError("");
+    setPriceSuggestion(null);
+
+    try {
+      const response = await fetch(
+        `${backend_url}/api/ml/demand/price/${encodeURIComponent(cropName)}`,
+        { credentials: "include" }
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || "Unable to get a price suggestion.");
+      }
+
+      if (data.suggested_price == null) {
+        setSuggestionError("There is not enough quotation history for this crop yet.");
+        return;
+      }
+
+      setPriceSuggestion(data);
+    } catch (error) {
+      console.error("Price suggestion request failed:", error);
+      setSuggestionError(error.message || "Unable to get a price suggestion.");
+    } finally {
+      setIsLoadingSuggestion(false);
+    }
+  };
+
+  const applyPriceSuggestion = () => {
+    if (priceSuggestion?.suggested_price == null) {
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      price: String(priceSuggestion.suggested_price),
+    }));
+    setPriceSuggestion(null);
+    setSuggestionError("");
+    setErrors((prev) => ({ ...prev, price: "" }));
   };
 
   const handleImageChange = (e) => {
@@ -224,6 +281,49 @@ console.log("kjsckjsnbjkds",data);
                   </div>
                   {errors.price && (
                     <p className="text-sm text-destructive">{errors.price}</p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePriceSuggestion}
+                    disabled={isLoadingSuggestion || !formData.name.trim()}
+                    className="w-fit"
+                  >
+                    {isLoadingSuggestion ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Checking market prices...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Suggest a price
+                      </>
+                    )}
+                  </Button>
+                  {priceSuggestion && (
+                    <div className="rounded-lg border border-farmer/30 bg-farmer/5 p-3 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-medium text-foreground">
+                          Suggested price: ₹{priceSuggestion.suggested_price}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="farmer"
+                          size="sm"
+                          onClick={applyPriceSuggestion}
+                        >
+                          Use this price
+                        </Button>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Recent range: ₹{priceSuggestion.lower}–₹{priceSuggestion.upper}
+                      </p>
+                    </div>
+                  )}
+                  {suggestionError && (
+                    <p className="text-sm text-muted-foreground">{suggestionError}</p>
                   )}
                 </div>
 
