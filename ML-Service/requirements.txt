@@ -9,3 +9,4 @@ transformers==4.57.6
 regex==2025.10.22
 torch==2.14.1
 accelerate==1.15.0
+deep-translator

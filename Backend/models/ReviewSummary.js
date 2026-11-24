@@ -8,8 +8,11 @@ const reviewSummarySchema = new mongoose.Schema({
     unique: true
   },
   summary: { type: String, required: true },
+  summary_hi: { type: String, default: '' },
   positivePoints: { type: [String], default: [] },
+  positivePoints_hi: { type: [String], default: [] },
   concerns: { type: [String], default: [] },
+  concerns_hi: { type: [String], default: [] },
   confidence: { type: String, default: 'low' },
   reviewCount: { type: Number, required: true },
   model: { type: String, required: true },
